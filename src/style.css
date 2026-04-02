@@ -1,0 +1,16 @@
+/* 终端应用基础样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  overflow: hidden;
+  background: #0f0f14;
+}
+
+#app {
+  height: 100vh;
+}
