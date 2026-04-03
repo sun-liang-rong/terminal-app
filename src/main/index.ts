@@ -1,10 +1,14 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import * as pty from 'node-pty'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as childProcess from 'child_process'
 import { Client, ClientChannel } from 'ssh2'
+
+// ESM 模块中模拟 __dirname
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 interface PtyCreateOptions {
   id: string

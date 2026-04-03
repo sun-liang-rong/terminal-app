@@ -125,34 +125,36 @@ onMounted(async () => {
   terminal.writeln(`\x1b[32m✓ 已连接到 ${props.host}\x1b[0m`)
   terminal.writeln('')
 
-  // 监听 SSH 数据
-  sshDataListenerId = electronAPI.onSshData(({ id, data }) => {
-    if (id === props.sshId && terminal) {
-      terminal.write(data)
-    }
-  })
+  // 监听 SSH 数据 (仅在 electronAPI 可用时)
+  if (electronAPI) {
+    sshDataListenerId = electronAPI.onSshData(({ id, data }) => {
+      if (id === props.sshId && terminal) {
+        terminal.write(data)
+      }
+    })
 
-  // 监听 SSH 关闭
-  sshCloseListenerId = electronAPI.onSshClose(({ id }) => {
-    if (id === props.sshId && terminal) {
-      terminal.writeln('')
-      terminal.writeln('\x1b[31m连接已关闭\x1b[0m')
-      emit('title-change', '已断开')
-      emit('disconnected')
-    }
-  })
+    // 监听 SSH 关闭
+    sshCloseListenerId = electronAPI.onSshClose(({ id }) => {
+      if (id === props.sshId && terminal) {
+        terminal.writeln('')
+        terminal.writeln('\x1b[31m连接已关闭\x1b[0m')
+        emit('title-change', '已断开')
+        emit('disconnected')
+      }
+    })
 
-  // 用户输入转发到 SSH
-  terminal.onData((data) => {
-    electronAPI.sshWrite({ id: props.sshId, data })
-  })
+    // 用户输入转发到 SSH
+    terminal.onData((data) => {
+      electronAPI.sshWrite({ id: props.sshId, data })
+    })
+  }
 
   // 复制功能：选择文本后自动复制
   terminal.onSelectionChange(() => {
     if (!settings.autoCopy) return
     if (terminal && terminal.hasSelection()) {
       const selection = terminal.getSelection()
-      if (selection) {
+      if (selection && electronAPI) {
         electronAPI.clipboardWrite(selection)
       }
     }
@@ -166,7 +168,7 @@ onMounted(async () => {
     // Ctrl+Shift+C 复制
     if (event.ctrlKey && event.shiftKey) {
       if (event.key === 'C' || event.key === 'c') {
-        if (terminal) {
+        if (terminal && electronAPI) {
           const selection = terminal.getSelection()
           if (selection) {
             electronAPI.clipboardWrite(selection)
@@ -176,9 +178,11 @@ onMounted(async () => {
       }
       // Ctrl+Shift+V 粘贴
       if (event.key === 'V' || event.key === 'v') {
-        const text = electronAPI.clipboardRead()
-        if (text) {
-          electronAPI.sshWrite({ id: props.sshId, data: text })
+        if (electronAPI) {
+          const text = electronAPI.clipboardRead()
+          if (text) {
+            electronAPI.sshWrite({ id: props.sshId, data: text })
+          }
         }
         return false
       }
@@ -188,7 +192,7 @@ onMounted(async () => {
 
   // 窗口大小改变
   resizeHandler = () => {
-    if (fitAddon && terminal && props.active) {
+    if (fitAddon && terminal && props.active && electronAPI) {
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.sshResize({ id: props.sshId, cols, rows })
@@ -198,7 +202,7 @@ onMounted(async () => {
 
   // 初始调整大小
   setTimeout(() => {
-    if (fitAddon && terminal) {
+    if (fitAddon && terminal && electronAPI) {
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.sshResize({ id: props.sshId, cols, rows })
@@ -210,7 +214,7 @@ onMounted(async () => {
 watch(() => props.active, (active) => {
   if (active && terminal && fitAddon) {
     setTimeout(() => {
-      if (!terminal || !fitAddon) return
+      if (!terminal || !fitAddon || !electronAPI) return
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.sshResize({ id: props.sshId, cols, rows })
@@ -220,7 +224,7 @@ watch(() => props.active, (active) => {
 
 // 监听 sshId 变化（重连时）
 watch(() => props.sshId, (newSshId, oldSshId) => {
-  if (newSshId && newSshId !== oldSshId && terminal) {
+  if (newSshId && newSshId !== oldSshId && terminal && electronAPI) {
     // 移除旧的监听器
     if (sshDataListenerId && electronAPI.removeSshListener) {
       electronAPI.removeSshListener(sshDataListenerId)
@@ -267,20 +271,22 @@ onUnmounted(() => {
     window.removeEventListener('settings-change', settingsChangeListener as EventListener)
   }
 
-  if (sshDataListenerId && electronAPI.removeSshListener) {
-    electronAPI.removeSshListener(sshDataListenerId)
-  }
-  if (sshCloseListenerId && electronAPI.removeSshListener) {
-    electronAPI.removeSshListener(sshCloseListenerId)
+  if (electronAPI) {
+    if (sshDataListenerId && electronAPI.removeSshListener) {
+      electronAPI.removeSshListener(sshDataListenerId)
+    }
+    if (sshCloseListenerId && electronAPI.removeSshListener) {
+      electronAPI.removeSshListener(sshCloseListenerId)
+    }
+
+    // 断开 SSH 连接
+    electronAPI.sshDisconnect({ id: props.sshId })
   }
 
   if (terminal) {
     terminal.dispose()
     terminal = null
   }
-
-  // 断开 SSH 连接
-  electronAPI.sshDisconnect({ id: props.sshId })
 })
 </script>
 

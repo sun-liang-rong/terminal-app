@@ -21,6 +21,7 @@ export default defineConfig({
           index: resolve(__dirname, 'src/preload/index.ts')
         },
         output: {
+          format: 'cjs',
           entryFileNames: 'index.js'
         }
       }

@@ -34,8 +34,8 @@ let ptyExitListenerId: number | null = null
 let themeChangeListener: ((e: Event) => void) | null = null
 let settingsChangeListener: ((e: Event) => void) | null = null
 
-// 获取 electron API (通过 preload 暴露)
-const electronAPI = window.electronAPI
+// 获取 electron API (通过 preload 暴露) - 每次访问都从 window 获取
+const getElectronAPI = () => window.electronAPI
 
 // 初始化设置
 initSettings()
@@ -128,6 +128,14 @@ onMounted(async () => {
   setTimeout(async () => {
     if (!props.active || !term || !fit) return
 
+    // 检查 electronAPI 是否可用
+    const electronAPI = getElectronAPI()
+    if (!electronAPI) {
+      term.writeln('\r\n\x1b[33mElectron API 未加载，切换到模拟模式.\x1b[0m\r\n')
+      initSimulationMode()
+      return
+    }
+
     fit.fit()
     const { cols, rows } = term
 
@@ -150,31 +158,35 @@ onMounted(async () => {
     }
   }, 800)
 
-  // 监听 PTY 输出
-  ptyDataListenerId = electronAPI.onPtyData(({ id, data }) => {
-    if (id === terminalId.value && terminal) {
-      terminal.write(data)
-    }
-  })
+  // 监听 PTY 输出 (仅在 electronAPI 可用时)
+  const electronAPI = getElectronAPI()
+  if (electronAPI) {
+    ptyDataListenerId = electronAPI.onPtyData(({ id, data }) => {
+      if (id === terminalId.value && terminal) {
+        terminal.write(data)
+      }
+    })
 
-  ptyExitListenerId = electronAPI.onPtyExit(({ id, exitCode }) => {
-    if (id === terminalId.value && terminal) {
-      terminal.writeln(`\r\n\x1b[31m进程已退出，退出码: ${exitCode}\x1b[0m`)
-      emit('title-change', `已退出 (${exitCode})`)
-    }
-  })
+    ptyExitListenerId = electronAPI.onPtyExit(({ id, exitCode }) => {
+      if (id === terminalId.value && terminal) {
+        terminal.writeln(`\r\n\x1b[31m进程已退出，退出码: ${exitCode}\x1b[0m`)
+        emit('title-change', `已退出 (${exitCode})`)
+      }
+    })
 
-  // 用户输入转发到 PTY
-  terminal.onData((data) => {
-    electronAPI.ptyWrite({ id: terminalId.value, data })
-  })
+    // 用户输入转发到 PTY
+    terminal.onData((data) => {
+      electronAPI.ptyWrite({ id: terminalId.value, data })
+    })
+  }
 
   // 复制功能：选择文本后自动复制，或 Ctrl+Shift+C 复制
   terminal.onSelectionChange(() => {
+    const electronAPI = getElectronAPI()
     if (!settings.autoCopy) return
     if (terminal && terminal.hasSelection()) {
       const selection = terminal.getSelection()
-      if (selection) {
+      if (selection && electronAPI) {
         electronAPI.clipboardWrite(selection)
       }
     }
@@ -182,13 +194,14 @@ onMounted(async () => {
 
   // 键盘快捷键
   terminal.attachCustomKeyEventHandler((event) => {
+    const electronAPI = getElectronAPI()
     // 只处理 keydown 事件，避免重复
     if (event.type !== 'keydown') return true
 
     // Ctrl+Shift+C 复制
     if (event.ctrlKey && event.shiftKey) {
       if (event.key === 'C' || event.key === 'c') {
-        if (terminal) {
+        if (terminal && electronAPI) {
           const selection = terminal.getSelection()
           if (selection) {
             electronAPI.clipboardWrite(selection)
@@ -198,9 +211,11 @@ onMounted(async () => {
       }
       // Ctrl+Shift+V 粘贴
       if (event.key === 'V' || event.key === 'v') {
-        const text = electronAPI.clipboardRead()
-        if (text) {
-          electronAPI.ptyWrite({ id: terminalId.value, data: text })
+        if (electronAPI) {
+          const text = electronAPI.clipboardRead()
+          if (text) {
+            electronAPI.ptyWrite({ id: terminalId.value, data: text })
+          }
         }
         return false
       }
@@ -229,7 +244,8 @@ onMounted(async () => {
 
   // 窗口大小改变时调整 PTY
   resizeHandler = () => {
-    if (fitAddon && terminal && props.active) {
+    const electronAPI = getElectronAPI()
+    if (fitAddon && terminal && props.active && electronAPI) {
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.ptyResize({ id: terminalId.value, cols, rows })
@@ -240,16 +256,18 @@ onMounted(async () => {
 
 // 当会话变为活跃时，调整终端大小并确保 PTY 已创建
 watch(() => props.active, async (active, wasActive) => {
+  const electronAPI = getElectronAPI()
   if (active && terminal && fitAddon) {
     setTimeout(() => {
-      if (!terminal || !fitAddon) return
+      const electronAPI = getElectronAPI()
+      if (!terminal || !fitAddon || !electronAPI) return
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.ptyResize({ id: terminalId.value, cols, rows })
     }, 50)
 
     // 如果之前没有活跃过，需要创建 PTY
-    if (!wasActive) {
+    if (!wasActive && electronAPI) {
       if (!terminal) return
       const { cols, rows } = terminal
       try {
@@ -267,6 +285,7 @@ watch(() => props.active, async (active, wasActive) => {
 })
 
 onUnmounted(() => {
+  const electronAPI = getElectronAPI()
   if (resizeHandler) {
     window.removeEventListener('resize', resizeHandler)
   }
@@ -282,24 +301,27 @@ onUnmounted(() => {
   }
 
   // 移除 PTY 监听器
-  if (ptyDataListenerId && electronAPI.removePtyListener) {
-    electronAPI.removePtyListener(ptyDataListenerId)
-  }
-  if (ptyExitListenerId && electronAPI.removePtyListener) {
-    electronAPI.removePtyListener(ptyExitListenerId)
+  if (electronAPI) {
+    if (ptyDataListenerId && electronAPI.removePtyListener) {
+      electronAPI.removePtyListener(ptyDataListenerId)
+    }
+    if (ptyExitListenerId && electronAPI.removePtyListener) {
+      electronAPI.removePtyListener(ptyExitListenerId)
+    }
+
+    // 关闭 PTY 进程
+    electronAPI.ptyKill({ id: terminalId.value })
   }
 
   if (terminal) {
     terminal.dispose()
     terminal = null
   }
-
-  // 关闭 PTY 进程
-  electronAPI.ptyKill({ id: terminalId.value })
 })
 
 // 显示欢迎横幅
 async function showWelcomeBanner() {
+  const electronAPI = getElectronAPI()
   if (!terminal) return
 
   const now = new Date()
@@ -309,7 +331,7 @@ async function showWelcomeBanner() {
   // 获取系统信息
   let sysInfo = null
   try {
-    if (electronAPI.getSystemInfo) {
+    if (electronAPI && electronAPI.getSystemInfo) {
       sysInfo = await electronAPI.getSystemInfo()
     }
   } catch (e) {

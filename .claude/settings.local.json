@@ -11,7 +11,8 @@
       "Bash(npx tsc:*)",
       "Bash(npx vue-tsc:*)",
       "mcp__ide__getDiagnostics",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(rm:*)"
     ]
   }
 }
