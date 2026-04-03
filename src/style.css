@@ -1,4 +1,6 @@
 /* 终端应用基础样式 */
+@import './assets/iconfont.css';
+
 * {
   margin: 0;
   padding: 0;

@@ -1,17 +1,19 @@
 <template>
-  <div class="sidebar">
+  <div class="sidebar" :class="{ collapsed: isCollapsed }">
     <div class="sidebar-header">
       <div class="logo">
-        <div class="logo-icon"></div>
-        <span class="logo-text">神经<span class="logo-accent">终端</span></span>
+        <div class="logo-icon">
+          <div class="logo-shine"></div>
+        </div>
+        <div class="logo-text" v-show="!isCollapsed">
+          神经<span class="logo-accent">终端</span>
+        </div>
       </div>
-      <div class="version">v4.0.2-测试版</div>
+      <div class="version" v-show="!isCollapsed">v4.0.2-测试版</div>
+      <button class="collapse-btn" @click="toggleCollapse" :title="isCollapsed ? '展开' : '折叠'">
+        <i class="iconfont" :class="isCollapsed ? 'icon-expand' : 'icon-collapse'"></i>
+      </button>
     </div>
-
-    <button class="new-thread-btn" @click="$emit('new-session')">
-      <span class="plus-icon">+</span>
-      新建会话
-    </button>
 
     <nav class="nav-menu">
       <div
@@ -20,26 +22,31 @@
         class="nav-item"
         :class="{ active: activeTab === item.id }"
         @click="$emit('tab-change', item.id)"
+        :title="isCollapsed ? item.label : ''"
       >
-        <span class="nav-icon" :class="`icon-${item.id}`"></span>
-        <span class="nav-label">{{ item.label }}</span>
+        <div class="nav-indicator" v-if="activeTab === item.id"></div>
+        <i class="iconfont nav-icon" :class="item.icon"></i>
+        <span class="nav-label" v-show="!isCollapsed">{{ item.label }}</span>
       </div>
     </nav>
 
     <div class="sidebar-footer">
       <div class="footer-menu">
-        <div class="footer-item">
-          <span class="footer-icon icon-help"></span>
-          <span>帮助</span>
+        <div class="footer-item" :title="isCollapsed ? '帮助' : ''">
+          <i class="iconfont icon-help"></i>
+          <span v-show="!isCollapsed">帮助</span>
         </div>
-        <div class="footer-item">
-          <span class="footer-icon icon-logs"></span>
-          <span>日志</span>
+        <div class="footer-item" :title="isCollapsed ? '日志' : ''">
+          <i class="iconfont icon-logs"></i>
+          <span v-show="!isCollapsed">日志</span>
         </div>
       </div>
       <div class="user-profile">
-        <div class="user-avatar"></div>
-        <div class="user-info">
+        <div class="user-avatar">
+          <i class="iconfont icon-user"></i>
+          <div class="avatar-status"></div>
+        </div>
+        <div class="user-info" v-show="!isCollapsed">
           <div class="user-name">管理员</div>
           <div class="user-status">已验证节点</div>
         </div>
@@ -58,14 +65,19 @@ const props = defineProps({
   }
 })
 
-defineEmits(['tab-change', 'new-session'])
+defineEmits(['tab-change'])
+
+const isCollapsed = ref(false)
+
+const toggleCollapse = () => {
+  isCollapsed.value = !isCollapsed.value
+}
 
 const menuItems = ref([
-  { id: 'terminal', label: '终端' },
-  { id: 'assistant', label: '助手' },
-  { id: 'explorer', label: '资源管理器' },
-  { id: 'debugger', label: '调试器' },
-  { id: 'settings', label: '设置' }
+  { id: 'terminal', label: '终端', icon: 'icon-terminal' },
+  { id: 'assistant', label: '助手', icon: 'icon-assistant' },
+  { id: 'ssh', label: 'SSH连接', icon: 'icon-ssh' },
+  { id: 'settings', label: '设置', icon: 'icon-settings' }
 ])
 </script>
 
@@ -73,29 +85,80 @@ const menuItems = ref([
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 240px;
-  background: #15151b;
-  border-right: 1px solid #23232c;
-  padding: 16px;
+  width: 260px;
+  background: linear-gradient(180deg, #12121a 0%, #0a0a0f 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 20px 16px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.15), transparent);
+  pointer-events: none;
+}
+
+.sidebar.collapsed {
+  width: 72px;
+  padding: 20px 12px;
 }
 
 .sidebar-header {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sidebar.collapsed .sidebar-header {
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: 10px;
+}
+
+.sidebar.collapsed .logo {
+  justify-content: center;
 }
 
 .logo-icon {
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 100%);
-  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 50%, #8b5cf6 100%);
+  border-radius: 10px;
   position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0, 240, 255, 0.25), 0 0 0 1px rgba(0, 240, 255, 0.1) inset;
+  overflow: hidden;
+}
+
+.logo-shine {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: rotate(45deg);
+  animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0%, 100% { transform: translateX(-50%) rotate(45deg); }
+  50% { transform: translateX(50%) rotate(45deg); }
 }
 
 .logo-icon::after {
@@ -104,232 +167,247 @@ const menuItems = ref([
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
-  background: #0f0f14;
-  border-radius: 2px;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .logo-text {
-  font-size: 18px;
-  font-weight: 600;
-  color: #e0e0e0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #f5f5f7;
   letter-spacing: -0.5px;
+  white-space: nowrap;
 }
 
 .logo-accent {
-  color: #00f0ff;
+  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .version {
   font-size: 11px;
   color: #6b6b78;
-  margin-left: 36px;
+  margin-left: 46px;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.new-thread-btn {
+.sidebar.collapsed .version {
+  margin-left: 0;
+  display: none;
+}
+
+.collapse-btn {
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  color: #8b8b9a;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #00f0ff 0%, #00d4ff 100%);
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #0f0f14;
-  cursor: pointer;
-  margin-bottom: 16px;
-  letter-spacing: 0.5px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s ease;
 }
 
-.new-thread-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+.collapse-btn:hover {
+  background: rgba(0, 240, 255, 0.1);
+  color: #00f0ff;
+  border-color: rgba(0, 240, 255, 0.2);
+  transform: scale(1.05);
 }
 
-.plus-icon {
-  font-size: 16px;
-  font-weight: 400;
+.collapse-btn .iconfont {
+  font-size: 14px;
 }
 
 .nav-menu {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding: 8px 0;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
   position: relative;
+  color: #8b8b9a;
+}
+
+.nav-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.04), rgba(59, 130, 246, 0.02));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.03);
+  color: #e5e5e7;
+  transform: translateX(2px);
+}
+
+.nav-item:hover::before {
+  opacity: 1;
 }
 
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(0, 240, 255, 0.1) 0%, transparent 100%);
-  border-left: 2px solid #00f0ff;
-  padding-left: 10px;
+  color: #00f0ff;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.12) 0%, rgba(59, 130, 246, 0.06) 100%);
+  box-shadow: 0 4px 16px rgba(0, 240, 255, 0.1), inset 0 0 0 1px rgba(0, 240, 255, 0.15);
 }
 
-.nav-item.active::before {
-  content: '';
+.nav-indicator {
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #00f0ff;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(180deg, #00f0ff 0%, #3b82f6 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
 }
 
 .nav-icon {
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 18px;
+  z-index: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-.icon-terminal::before {
-  content: '▸';
-  color: #00f0ff;
-  font-size: 14px;
-}
-
-.icon-assistant::before {
-  content: '◉';
-  color: #6b6b78;
-  font-size: 10px;
-}
-
-.icon-explorer::before {
-  content: '📁';
-  font-size: 14px;
-}
-
-.icon-debugger::before {
-  content: '⚙';
-  color: #6b6b78;
-  font-size: 14px;
-}
-
-.icon-settings::before {
-  content: '⚙';
-  color: #6b6b78;
-  font-size: 14px;
-}
-
-.nav-item.active .nav-icon::before {
-  color: #00f0ff;
+.nav-item.active .nav-icon {
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5));
 }
 
 .nav-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
-  color: #6b6b78;
-  letter-spacing: 0.3px;
-}
-
-.nav-item.active .nav-label {
-  color: #e0e0e0;
+  letter-spacing: 0.2px;
+  z-index: 1;
 }
 
 .sidebar-footer {
   margin-top: auto;
   padding-top: 16px;
-  border-top: 1px solid #23232c;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .footer-menu {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
 .footer-item {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 11px;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
   color: #6b6b78;
+  font-size: 13px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
 }
 
 .footer-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.footer-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.icon-help::before {
-  content: '?';
-  color: #6b6b78;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.icon-logs::before {
-  content: '📋';
-  font-size: 12px;
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.05);
+  border-color: rgba(0, 240, 255, 0.1);
 }
 
 .user-profile {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.2s ease;
+}
+
+.user-profile:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar.collapsed .user-profile {
+  justify-content: center;
+  padding: 12px 8px;
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 100%);
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #28ca41 0%, #16a34a 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(40, 202, 65, 0.25);
 }
 
-.user-avatar::after {
-  content: '👤';
+.user-avatar .iconfont {
+  font-size: 20px;
+  color: #fff;
+}
+
+.avatar-status {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 16px;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #28ca41;
+  border-radius: 50%;
+  border: 2px solid #0a0a0f;
+  box-shadow: 0 0 8px rgba(40, 202, 65, 0.6);
 }
 
 .user-info {
-  display: flex;
-  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .user-name {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: #e5e5e7;
+  margin-bottom: 2px;
 }
 
 .user-status {
-  font-size: 10px;
-  color: #6b6b78;
+  font-size: 12px;
+  color: #28ca41;
 }
 </style>
