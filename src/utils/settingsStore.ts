@@ -28,24 +28,58 @@ const defaultSettings: TerminalSettings = {
 // 响应式状态
 const state = reactive<TerminalSettings>({ ...defaultSettings })
 
-// 保存设置到 localStorage
-function saveSettings() {
-  localStorage.setItem('terminal-settings', JSON.stringify(state))
+// 是否已从 Electron 加载设置
+let loadedFromElectron = false
+
+// 保存设置到 Electron 存储
+async function saveSettingsToElectron() {
+  try {
+    if (window.electronAPI?.saveTerminalSettings) {
+      // 转换为普通对象
+      const plainSettings = JSON.parse(JSON.stringify(state))
+      await window.electronAPI.saveTerminalSettings(plainSettings)
+    } else {
+      // 回退到 localStorage
+      localStorage.setItem('terminal-settings', JSON.stringify(state))
+    }
+  } catch (e) {
+    console.error('Failed to save settings:', e)
+    // 回退到 localStorage
+    localStorage.setItem('terminal-settings', JSON.stringify(state))
+  }
 }
 
-// 初始化设置（从 localStorage 恢复）
-export function initSettings() {
+// 初始化设置（从 Electron 存储恢复）
+export async function initSettings() {
+  if (loadedFromElectron) return
+
+  try {
+    if (window.electronAPI?.getTerminalSettings) {
+      const result = await window.electronAPI.getTerminalSettings()
+      if (result.success && result.data) {
+        Object.assign(state, {
+          ...defaultSettings,
+          ...result.data as TerminalSettings
+        })
+        loadedFromElectron = true
+        return
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load settings from Electron:', e)
+  }
+
+  // 回退到 localStorage
   const saved = localStorage.getItem('terminal-settings')
   if (saved) {
     try {
       const parsed = JSON.parse(saved)
-      // 合并保存的设置，保留默认值
       Object.assign(state, {
         ...defaultSettings,
         ...parsed
       })
     } catch (e) {
-      console.error('Failed to load settings:', e)
+      console.error('Failed to load settings from localStorage:', e)
     }
   }
 
@@ -72,7 +106,7 @@ export function updateSetting<K extends keyof TerminalSettings>(
   value: TerminalSettings[K]
 ) {
   state[key] = value
-  saveSettings()
+  saveSettingsToElectron()
 
   // 触发事件通知终端更新
   window.dispatchEvent(new CustomEvent('settings-change', {
@@ -90,7 +124,7 @@ export function updateSetting<K extends keyof TerminalSettings>(
 // 批量更新设置
 export function updateAllSettings(settings: Partial<TerminalSettings>) {
   Object.assign(state, settings)
-  saveSettings()
+  saveSettingsToElectron()
 
   // 触发事件
   window.dispatchEvent(new CustomEvent('settings-change', {
@@ -101,7 +135,7 @@ export function updateAllSettings(settings: Partial<TerminalSettings>) {
 // 重置为默认设置
 export function resetSettings() {
   Object.assign(state, defaultSettings)
-  saveSettings()
+  saveSettingsToElectron()
 
   window.dispatchEvent(new CustomEvent('settings-change', {
     detail: { ...state }

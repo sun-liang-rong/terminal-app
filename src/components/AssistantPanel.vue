@@ -2,6 +2,14 @@
   <div class="assistant-panel">
     <!-- 顶部搜索区 -->
     <div class="search-section">
+      <div class="system-select">
+        <select v-model="selectedPlatform" :disabled="loading">
+          <option value="auto">自动</option>
+          <option value="windows">Windows</option>
+          <option value="macos">macOS</option>
+          <option value="linux">Linux</option>
+        </select>
+      </div>
       <div class="search-box">
         <i class="iconfont icon-search"></i>
         <input
@@ -12,8 +20,8 @@
           :disabled="loading"
         />
       </div>
-      <button class="generate-btn" @click="generateCommands" :disabled="loading || !searchQuery.trim()">
-        <i class="iconfont icon-ai" v-if="!loading"></i>
+      <button class="generate-btn ai-button" @click="generateCommands" :disabled="loading || !searchQuery.trim()">
+        <i class="iconfont icon-ai" :class="{ 'ai-glow': !loading }" v-if="!loading"></i>
         <span class="loading-spinner" v-else></span>
         <span>{{ loading ? '生成中...' : '生成' }}</span>
       </button>
@@ -23,7 +31,7 @@
     </div>
 
     <!-- 热门场景 -->
-    <div class="hot-scenes" v-if="!searchQuery || commands.length === 0">
+    <div class="hot-scenes" v-if="!searchQuery || (commands.length === 0 && !loading)">
       <div class="section-label">热门场景</div>
       <div class="scene-tags">
         <button
@@ -37,19 +45,60 @@
       </div>
     </div>
 
-    <!-- 未配置提示 -->
-    <div class="not-configured" v-if="!isConfigured">
-      <div class="config-icon">
-        <i class="iconfont icon-settings"></i>
+    <!-- 加载中 Skeleton -->
+    <div class="loading-section" v-if="loading">
+      <div class="section-label">正在生成命令...</div>
+      <div class="skeleton-list">
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-badge"></div>
+          </div>
+          <div class="skeleton-code"></div>
+          <div class="skeleton-desc">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-badge"></div>
+          </div>
+          <div class="skeleton-code short"></div>
+          <div class="skeleton-desc">
+            <div class="skeleton-line"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-badge"></div>
+          </div>
+          <div class="skeleton-code"></div>
+          <div class="skeleton-desc">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+        </div>
       </div>
-      <div class="config-text">请先配置 AI API Key</div>
-      <button class="config-btn" @click="showSettings = true">
-        打开设置
-      </button>
     </div>
 
+    <!-- 未配置提示 -->
+    <EmptyState
+      v-if="!isConfigured"
+      type="config"
+      icon="icon-settings"
+      title="请先配置 AI API Key"
+      description="配置 AI 服务后即可使用智能命令生成功能"
+    >
+      <template #actions>
+        <button class="primary" @click="showSettings = true">打开设置</button>
+      </template>
+    </EmptyState>
+
     <!-- 命令列表 -->
-    <div class="commands-section" v-if="commands.length > 0">
+    <div class="commands-section" v-if="commands.length > 0 && !loading">
       <div class="section-label">相关命令</div>
       <div class="commands-list">
         <div
@@ -74,17 +123,14 @@
     </div>
 
     <!-- 空状态 -->
-    <div class="empty-state" v-if="searchQuery && !loading && commands.length === 0 && isConfigured">
-      <div class="empty-icon">🔍</div>
-      <div class="empty-text">点击"生成"获取相关命令</div>
-    </div>
-
-    <!-- 错误提示 -->
-    <div class="error-toast" v-if="error">
-      <i class="iconfont icon-error"></i>
-      <span>{{ error }}</span>
-      <button class="close-btn" @click="error = ''">×</button>
-    </div>
+    <EmptyState
+      v-if="searchQuery && !loading && commands.length === 0 && isConfigured"
+      type="search"
+      icon="icon-search"
+      title="准备就绪"
+      description="点击「生成」按钮，AI 将为您推荐相关命令"
+      size="large"
+    />
 
     <!-- 设置弹窗 -->
     <div class="settings-modal" v-if="showSettings" @click.self="showSettings = false">
@@ -165,6 +211,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { aiService, type Command, type AISettings } from '../utils/ai'
+import { toast } from '../utils/notification'
+import EmptyState from './EmptyState.vue'
 
 // 获取 electron API
 const electronAPI = window.electronAPI
@@ -173,9 +221,9 @@ const electronAPI = window.electronAPI
 const searchQuery = ref('')
 const commands = ref<Command[]>([])
 const loading = ref(false)
-const error = ref('')
 const copiedIndex = ref<number | null>(null)
 const showSettings = ref(false)
+const selectedPlatform = ref('auto')
 
 // 设置
 const settings = ref<AISettings>(aiService.getSettings())
@@ -195,6 +243,9 @@ const hotScenes = [
 
 // 获取平台
 const getPlatform = (): string => {
+  if (selectedPlatform.value !== 'auto') {
+    return selectedPlatform.value
+  }
   return navigator.platform.toLowerCase().includes('win') ? 'windows' :
          navigator.platform.toLowerCase().includes('mac') ? 'macos' : 'linux'
 }
@@ -231,15 +282,17 @@ const generateCommands = async () => {
   }
 
   loading.value = true
-  error.value = ''
   commands.value = []
 
   try {
     const platform = getPlatform()
     const result = await aiService.generateCommands(searchQuery.value, platform)
+    if (result.length === 0) {
+      toast.warning('未找到相关命令，请尝试其他描述')
+    }
     commands.value = result
   } catch (e: any) {
-    error.value = e.message || '生成失败，请重试'
+    toast.error(e.message || '生成失败，请重试')
   } finally {
     loading.value = false
   }
@@ -250,22 +303,30 @@ const copyCommand = async (command: string) => {
   try {
     await electronAPI.clipboardWrite(command)
     copiedIndex.value = commands.value.findIndex(c => c.command === command)
+    toast.success('命令已复制')
     setTimeout(() => {
       copiedIndex.value = null
     }, 1500)
   } catch (e) {
-    error.value = '复制失败'
+    toast.error('复制失败')
   }
 }
 
 // 保存设置
-const saveSettings = () => {
-  aiService.saveSettings(settings.value)
+const saveSettings = async () => {
+  await aiService.saveSettings(settings.value)
+  toast.success('AI 设置已保存')
   showSettings.value = false
 }
 
+// 加载设置
+const loadSettings = async () => {
+  // 等待设置加载完成
+  settings.value = await aiService.waitForSettings()
+}
+
 onMounted(() => {
-  settings.value = aiService.getSettings()
+  loadSettings()
 })
 </script>
 
@@ -274,19 +335,45 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1a1a24;
-  color: #e0e0e0;
+  background: var(--color-bg-surface, #1a1a24);
+  color: var(--color-text-input, #e0e0e0);
   overflow: hidden;
 }
 
 /* 搜索区 */
 .search-section {
   padding: 16px 20px;
-  background: #15151b;
-  border-bottom: 1px solid #23232c;
+  background: var(--color-bg-elevated, #15151b);
+  border-bottom: 1px solid var(--color-border-default, #23232c);
   display: flex;
   align-items: stretch;
   gap: 12px;
+}
+
+.system-select select {
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--color-bg-input, #0d0d12);
+  border: 1px solid var(--color-border-input, #23232c);
+  border-radius: 10px;
+  color: var(--color-text-input, #e0e0e0);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.system-select select:hover {
+  border-color: var(--color-brand-primary, #00f0ff);
+}
+
+.system-select select:focus {
+  border-color: var(--color-brand-primary, #00f0ff);
+}
+
+.system-select select option {
+  background: var(--color-bg-surface, #1a1a24);
+  color: var(--color-text-input, #e0e0e0);
 }
 
 .search-box {
@@ -294,15 +381,15 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 0 16px;
-  background: #0d0d12;
-  border: 1px solid #23232c;
-  border-radius: 8px;
+  background: var(--color-bg-input, #0d0d12);
+  border: 1px solid var(--color-border-input, #23232c);
+  border-radius: 10px;
   flex: 1;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .search-box i {
-  color: #6b6b78;
+  color: var(--color-text-tertiary, #6b6b78);
   font-size: 16px;
 }
 
@@ -312,23 +399,22 @@ onMounted(() => {
   background: transparent;
   border: none;
   outline: none;
-  color: #e0e0e0;
+  color: var(--color-text-input, #e0e0e0);
   font-size: 14px;
-  height: 40px;
-  line-height: 40px;
+  min-height: 44px;
 }
 
 .search-box input::placeholder {
-  color: #5a5a68;
+  color: var(--color-text-disabled, #5a5a68);
 }
 
 .settings-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid #23232c;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-input, #23232c);
   background: transparent;
-  color: #6b6b78;
+  color: var(--color-text-tertiary, #6b6b78);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -337,9 +423,9 @@ onMounted(() => {
 }
 
 .settings-btn:hover {
-  background: #23232c;
-  color: #00f0ff;
-  border-color: #00f0ff;
+  background: var(--color-border-input, #23232c);
+  color: var(--color-brand-primary, #00f0ff);
+  border-color: var(--color-brand-primary, #00f0ff);
 }
 
 .generate-btn {
@@ -348,20 +434,26 @@ onMounted(() => {
   justify-content: center;
   gap: 6px;
   padding: 0 20px;
-  height: 40px;
-  background: linear-gradient(135deg, #00f0ff 0%, #00d4ff 100%);
-  border: none;
-  border-radius: 8px;
-  color: #0f0f14;
+  min-height: 44px;
+  background: var(--color-ai-gradient, linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(0, 240, 255, 0.15) 100%));
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 10px;
+  color: var(--color-ai-secondary, #a78bfa);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .generate-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.35) 0%, rgba(0, 240, 255, 0.2) 100%);
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.25);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+}
+
+.generate-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .generate-btn:disabled {
@@ -372,7 +464,7 @@ onMounted(() => {
 .loading-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid #0f0f14;
+  border: 2px solid var(--color-bg-base, #0f0f14);
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -385,15 +477,112 @@ onMounted(() => {
 /* 热门场景 */
 .hot-scenes {
   padding: 16px 20px;
-  border-bottom: 1px solid #23232c;
+  border-bottom: 1px solid var(--color-border-default, #23232c);
 }
 
 .section-label {
   font-size: 12px;
-  color: #6b6b78;
+  color: var(--color-text-tertiary, #6b6b78);
   margin-bottom: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* 加载中 Skeleton */
+.loading-section {
+  flex: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-card {
+  background: var(--color-bg-hover, #23232c);
+  border: 1px solid var(--color-border-default, #2a2a35);
+  border-radius: 8px;
+  padding: 16px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.skeleton-title {
+  width: 120px;
+  height: 16px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-badge {
+  width: 60px;
+  height: 18px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-code {
+  height: 36px;
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.03) 0%, rgba(0, 240, 255, 0.08) 50%, rgba(0, 240, 255, 0.03) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.skeleton-code.short {
+  height: 28px;
+  width: 80%;
+}
+
+.skeleton-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-line {
+  height: 12px;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.03) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 3px;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .scene-tags {
@@ -404,55 +593,22 @@ onMounted(() => {
 
 .scene-tag {
   padding: 6px 12px;
-  background: #23232c;
-  border: 1px solid #2a2a35;
+  background: var(--color-bg-hover, #23232c);
+  border: 1px solid var(--color-border-default, #2a2a35);
   border-radius: 16px;
-  color: #9b9ba5;
+  color: var(--color-text-secondary, #9b9ba5);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .scene-tag:hover {
-  background: #2a2a35;
-  color: #00f0ff;
-  border-color: #00f0ff;
+  background: var(--color-bg-active, #2a2a35);
+  color: var(--color-brand-primary, #00f0ff);
+  border-color: var(--color-brand-primary, #00f0ff);
 }
 
-/* 未配置提示 */
-.not-configured {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  gap: 16px;
-  color: #6b6b78;
-}
-
-.config-icon {
-  font-size: 48px;
-  color: #3a3a48;
-}
-
-.config-text {
-  font-size: 14px;
-}
-
-.config-btn {
-  padding: 10px 20px;
-  background: #23232c;
-  border: 1px solid #2a2a35;
-  border-radius: 6px;
-  color: #00f0ff;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.config-btn:hover {
-  background: #2a2a35;
-}
+/* 未配置提示 - 已改用 EmptyState 组件 */
 
 /* 命令列表 */
 .commands-section {
@@ -468,8 +624,8 @@ onMounted(() => {
 }
 
 .command-card {
-  background: #23232c;
-  border: 1px solid #2a2a35;
+  background: var(--color-bg-hover, #23232c);
+  border: 1px solid var(--color-border-default, #2a2a35);
   border-radius: 8px;
   padding: 16px;
   position: relative;
@@ -485,20 +641,20 @@ onMounted(() => {
 .command-name {
   font-size: 14px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--color-text-input, #e0e0e0);
 }
 
 .command-platform {
   font-size: 10px;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #3a3a48;
-  color: #9b9ba5;
+  background: var(--color-bg-active, #3a3a48);
+  color: var(--color-text-secondary, #9b9ba5);
 }
 
 .command-platform.macos {
   background: rgba(0, 240, 255, 0.1);
-  color: #00f0ff;
+  color: var(--color-brand-primary, #00f0ff);
 }
 
 .command-platform.windows {
@@ -512,7 +668,7 @@ onMounted(() => {
 }
 
 .command-code {
-  background: #0d0d12;
+  background: var(--color-bg-input, #0d0d12);
   border-radius: 4px;
   padding: 10px 12px;
   margin-bottom: 10px;
@@ -522,14 +678,14 @@ onMounted(() => {
 .command-code code {
   font-family: 'SF Mono', Menlo, Monaco, monospace;
   font-size: 13px;
-  color: #00f0ff;
+  color: var(--color-brand-primary, #00f0ff);
   white-space: pre-wrap;
   word-break: break-all;
 }
 
 .command-desc {
   font-size: 12px;
-  color: #6b6b78;
+  color: var(--color-text-tertiary, #6b6b78);
   margin-bottom: 12px;
 }
 
@@ -539,17 +695,17 @@ onMounted(() => {
   gap: 6px;
   padding: 6px 12px;
   background: transparent;
-  border: 1px solid #2a2a35;
+  border: 1px solid var(--color-border-default, #2a2a35);
   border-radius: 4px;
-  color: #6b6b78;
+  color: var(--color-text-tertiary, #6b6b78);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .copy-btn:hover {
-  background: #2a2a35;
-  color: #e0e0e0;
+  background: var(--color-bg-active, #2a2a35);
+  color: var(--color-text-input, #e0e0e0);
 }
 
 .copy-btn.copied {
@@ -558,55 +714,7 @@ onMounted(() => {
   color: #00d4aa;
 }
 
-/* 空状态 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  gap: 12px;
-  color: #6b6b78;
-}
-
-.empty-icon {
-  font-size: 48px;
-}
-
-.empty-text {
-  font-size: 14px;
-}
-
-/* 错误提示 */
-.error-toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid #ff6b6b;
-  border-radius: 8px;
-  color: #ff6b6b;
-  font-size: 13px;
-  z-index: 100;
-}
-
-.error-toast .close-btn {
-  background: transparent;
-  border: none;
-  color: #ff6b6b;
-  font-size: 16px;
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-.error-toast .close-btn:hover {
-  opacity: 1;
-}
+/* 空状态 - 已改用 EmptyState 组件 */
 
 /* 设置弹窗 */
 .settings-modal {
@@ -619,15 +727,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal-overlay, 3001);
   backdrop-filter: blur(4px);
 }
 
 .modal-content {
   width: 400px;
   max-width: 90vw;
-  background: #1a1a24;
-  border: 1px solid #2a2a35;
+  background: var(--color-bg-surface, #1a1a24);
+  border: 1px solid var(--color-border-default, #2a2a35);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -637,25 +745,25 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #23232c;
+  border-bottom: 1px solid var(--color-border-input, #23232c);
 }
 
 .modal-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--color-text-input, #e0e0e0);
 }
 
 .modal-header .close-btn {
   background: transparent;
   border: none;
-  color: #6b6b78;
+  color: var(--color-text-tertiary, #6b6b78);
   font-size: 20px;
   cursor: pointer;
 }
 
 .modal-header .close-btn:hover {
-  color: #e0e0e0;
+  color: var(--color-text-input, #e0e0e0);
 }
 
 .modal-body {
@@ -669,27 +777,27 @@ onMounted(() => {
 .form-group label {
   display: block;
   font-size: 13px;
-  color: #9b9ba5;
+  color: var(--color-text-secondary, #9b9ba5);
   margin-bottom: 8px;
 }
 
 .form-group input {
   width: 100%;
   padding: 10px 12px;
-  background: #0d0d12;
-  border: 1px solid #23232c;
+  background: var(--color-bg-input, #0d0d12);
+  border: 1px solid var(--color-border-input, #23232c);
   border-radius: 6px;
-  color: #e0e0e0;
+  color: var(--color-text-input, #e0e0e0);
   font-size: 14px;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #00f0ff;
+  border-color: var(--color-brand-primary, #00f0ff);
 }
 
 .form-group input::placeholder {
-  color: #5a5a68;
+  color: var(--color-text-disabled, #5a5a68);
 }
 
 .provider-tabs {
@@ -700,23 +808,23 @@ onMounted(() => {
 .provider-tab {
   flex: 1;
   padding: 10px;
-  background: #0d0d12;
-  border: 1px solid #23232c;
+  background: var(--color-bg-input, #0d0d12);
+  border: 1px solid var(--color-border-input, #23232c);
   border-radius: 6px;
-  color: #6b6b78;
+  color: var(--color-text-tertiary, #6b6b78);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .provider-tab:hover {
-  background: #23232c;
+  background: var(--color-bg-hover, #23232c);
 }
 
 .provider-tab.active {
   background: rgba(0, 240, 255, 0.1);
-  border-color: #00f0ff;
-  color: #00f0ff;
+  border-color: var(--color-brand-primary, #00f0ff);
+  color: var(--color-brand-primary, #00f0ff);
 }
 
 .modal-footer {
@@ -724,7 +832,7 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 20px;
-  border-top: 1px solid #23232c;
+  border-top: 1px solid var(--color-border-input, #23232c);
 }
 
 .btn {
@@ -738,23 +846,23 @@ onMounted(() => {
 
 .btn.secondary {
   background: transparent;
-  border: 1px solid #2a2a35;
-  color: #9b9ba5;
+  border: 1px solid var(--color-border-default, #2a2a35);
+  color: var(--color-text-secondary, #9b9ba5);
 }
 
 .btn.secondary:hover {
-  background: #23232c;
-  color: #e0e0e0;
+  background: var(--color-bg-hover, #23232c);
+  color: var(--color-text-input, #e0e0e0);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #00f0ff 0%, #00d4ff 100%);
+  background: linear-gradient(135deg, var(--color-brand-primary) 0%, #00d4ff 100%);
   border: none;
-  color: #0f0f14;
+  color: var(--color-bg-base, #0f0f14);
 }
 
 .btn.primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--color-brand-primary-rgb), 0.3);
 }
 </style>

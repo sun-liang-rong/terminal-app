@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
-    <div v-if="visible" class="ssh-modal-overlay" @click.self="close">
-      <div class="ssh-modal">
+    <div v-if="visible" class="ssh-modal-overlay" :style="overlayStyle" @click.self="close" @click="handleFocus">
+      <div class="ssh-modal" :style="modalStyle">
         <div class="modal-header">
           <h3>SSH 连接</h3>
           <button class="close-btn" @click="close">×</button>
@@ -65,7 +65,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, watch, onUnmounted } from 'vue'
+import { registerModal, unregisterModal, bringToFront } from '../utils/modalManager'
 
 const props = defineProps({
   visible: {
@@ -85,6 +86,42 @@ const config = reactive({
 
 const error = ref('')
 const connecting = ref(false)
+let modalId: string | null = null
+let modalZIndex: number = 3000
+
+// 动态样式
+const overlayStyle = computed(() => ({
+  zIndex: modalZIndex
+}))
+
+const modalStyle = computed(() => ({
+  zIndex: modalZIndex + 1
+}))
+
+// 当 visible 变化时注册/取消注册模态框
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    const registration = registerModal('ssh-modal', true)
+    modalId = registration.id
+    modalZIndex = registration.zIndex
+  } else if (modalId) {
+    unregisterModal(modalId)
+    modalId = null
+  }
+})
+
+const handleFocus = () => {
+  if (modalId) {
+    bringToFront(modalId)
+    modalZIndex = registerModal('ssh-modal-focus', true).zIndex
+  }
+}
+
+onUnmounted(() => {
+  if (modalId) {
+    unregisterModal(modalId)
+  }
+})
 
 function close() {
   error.value = ''
@@ -141,8 +178,8 @@ async function connect() {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
   backdrop-filter: blur(4px);
+  /* z-index 由 modalManager 动态管理 */
 }
 
 .ssh-modal {

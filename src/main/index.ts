@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, safeStorage } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import * as pty from 'node-pty'
@@ -41,6 +41,12 @@ let mainWindow: BrowserWindow | null = null
 const ptyProcesses = new Map<string, pty.IPty>()
 
 function createWindow(): void {
+  // 计算 preload 路径 - 使用绝对路径
+  const preloadPath = path.resolve(__dirname, '../preload/index.cjs')
+  console.log('[Main] __dirname:', __dirname)
+  console.log('[Main] Preload path:', preloadPath)
+  console.log('[Main] Preload exists:', fs.existsSync(preloadPath))
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -50,9 +56,11 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: preloadPath,
       webSecurity: false,
-      sandbox: false
+      sandbox: false,
+      // 禁用沙箱以确保 preload 正确执行
+      enableBlinkFeatures: ''
     }
   })
 
@@ -82,6 +90,11 @@ function createWindow(): void {
 
 app.whenReady().then(createWindow)
 
+// 监听 preload 加载通知
+ipcMain.on('preload-loaded', () => {
+  console.log('[Main] Preload script loaded successfully!')
+})
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
@@ -96,6 +109,8 @@ app.on('activate', () => {
 
 // 创建 PTY 进程
 ipcMain.handle('pty-create', (_event, { id, cols, rows }: PtyCreateOptions): PtyResult => {
+  console.log('[PTY] Creating PTY with id:', id, 'cols:', cols, 'rows:', rows)
+
   try {
     // 检测可用的 shell
     let shell: string
@@ -114,7 +129,18 @@ ipcMain.handle('pty-create', (_event, { id, cols, rows }: PtyCreateOptions): Pty
         process.env.SystemRoot + '\\System32\\cmd.exe',
         'C:\\Windows\\System32\\cmd.exe'
       ]
+
+      // 记录检测过程
+      console.log('[PTY] Checking shell paths...')
+      for (const p of shellPaths) {
+        if (p) {
+          const exists = fs.existsSync(p)
+          console.log(`[PTY]   ${p}: ${exists ? 'EXISTS' : 'not found'}`)
+        }
+      }
+
       shell = shellPaths.find(p => p && fs.existsSync(p)) || 'cmd.exe'
+      console.log('[PTY] Selected shell:', shell)
     } else {
       // Unix-like (macOS, Linux)
       shell = process.env.SHELL || ''
@@ -142,7 +168,7 @@ ipcMain.handle('pty-create', (_event, { id, cols, rows }: PtyCreateOptions): Pty
       }
     }
 
-    console.log('Starting shell:', shell, 'with args:', shellArgs)
+    console.log('[PTY] Starting shell:', shell, 'with args:', shellArgs)
 
     // 设置环境变量以支持 ANSI 颜色
     const env: Record<string, string> = {
@@ -170,6 +196,8 @@ ipcMain.handle('pty-create', (_event, { id, cols, rows }: PtyCreateOptions): Pty
       handleFlowControl: true
     })
 
+    console.log('[PTY] PTY created successfully, PID:', ptyProcess.pid)
+
     ptyProcesses.set(id, ptyProcess)
 
     // 转发 PTY 输出到渲染进程
@@ -180,6 +208,7 @@ ipcMain.handle('pty-create', (_event, { id, cols, rows }: PtyCreateOptions): Pty
     })
 
     ptyProcess.onExit(({ exitCode, signal }) => {
+      console.log('[PTY] Process exited, id:', id, 'exitCode:', exitCode, 'signal:', signal)
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('pty-exit', { id, exitCode, signal })
       }
@@ -188,7 +217,7 @@ ipcMain.handle('pty-create', (_event, { id, cols, rows }: PtyCreateOptions): Pty
 
     return { success: true, pid: ptyProcess.pid }
   } catch (error) {
-    console.error('Failed to create PTY:', error)
+    console.error('[PTY] Failed to create PTY:', error)
     return { success: false, error: (error as Error).message }
   }
 })
@@ -238,6 +267,11 @@ ipcMain.handle('pty-kill', (_event, { id }: PtyKillOptions): PtyResult => {
 
 // 获取平台信息
 ipcMain.handle('get-platform', () => process.platform)
+
+// 获取实时 CPU 使用率
+ipcMain.handle('get-cpu-usage', async (): Promise<number> => {
+  return await getCpuUsage()
+})
 
 // 获取系统信息
 interface SystemInfo {
@@ -510,4 +544,126 @@ ipcMain.handle('ssh-disconnect', (_event, { id }: { id: string }): SshResult => 
     }
   }
   return { success: false, error: 'SSH connection not found' }
+})
+
+// ===================== 数据存储相关 =====================
+
+// 存储文件路径
+const getStoragePath = () => {
+  const userDataPath = app.getPath('userData')
+  return path.join(userDataPath, 'ssh-hosts.json')
+}
+
+const getAIStoragePath = () => {
+  const userDataPath = app.getPath('userData')
+  return path.join(userDataPath, 'ai-settings.json')
+}
+
+const getTerminalSettingsPath = () => {
+  const userDataPath = app.getPath('userData')
+  return path.join(userDataPath, 'terminal-settings.json')
+}
+
+// 密码加密
+ipcMain.handle('encrypt-password', (_event, password: string) => {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) {
+      // 如果加密不可用，使用 base64 编码作为后备方案
+      return { success: true, data: Buffer.from(password).toString('base64') }
+    }
+    const encrypted = safeStorage.encryptString(password)
+    return { success: true, data: encrypted.toString('base64') }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 密码解密
+ipcMain.handle('decrypt-password', (_event, encrypted: string) => {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) {
+      // 如果加密不可用，使用 base64 解码作为后备方案
+      return { success: true, data: Buffer.from(encrypted, 'base64').toString() }
+    }
+    const buffer = Buffer.from(encrypted, 'base64')
+    const decrypted = safeStorage.decryptString(buffer)
+    return { success: true, data: decrypted }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 获取主机列表
+ipcMain.handle('get-hosts', () => {
+  try {
+    const storagePath = getStoragePath()
+    if (fs.existsSync(storagePath)) {
+      const data = fs.readFileSync(storagePath, 'utf-8')
+      return { success: true, data: JSON.parse(data) }
+    }
+    return { success: true, data: [] }
+  } catch (error) {
+    return { success: false, error: (error as Error).message, data: [] }
+  }
+})
+
+// 保存主机列表
+ipcMain.handle('save-hosts', (_event, hosts: unknown[]) => {
+  try {
+    const storagePath = getStoragePath()
+    fs.writeFileSync(storagePath, JSON.stringify(hosts, null, 2), 'utf-8')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 获取 AI 设置
+ipcMain.handle('get-ai-settings', () => {
+  try {
+    const storagePath = getAIStoragePath()
+    if (fs.existsSync(storagePath)) {
+      const data = fs.readFileSync(storagePath, 'utf-8')
+      return { success: true, data: JSON.parse(data) }
+    }
+    return { success: true, data: null }
+  } catch (error) {
+    return { success: false, error: (error as Error).message, data: null }
+  }
+})
+
+// 保存 AI 设置
+ipcMain.handle('save-ai-settings', (_event, settings: unknown) => {
+  try {
+    const storagePath = getAIStoragePath()
+    fs.writeFileSync(storagePath, JSON.stringify(settings, null, 2), 'utf-8')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 获取终端设置
+ipcMain.handle('get-terminal-settings', () => {
+  try {
+    const storagePath = getTerminalSettingsPath()
+    if (fs.existsSync(storagePath)) {
+      const data = fs.readFileSync(storagePath, 'utf-8')
+      return { success: true, data: JSON.parse(data) }
+    }
+    return { success: true, data: null }
+  } catch (error) {
+    return { success: false, error: (error as Error).message, data: null }
+  }
+})
+
+// 保存终端设置
+ipcMain.handle('save-terminal-settings', (_event, settings: unknown) => {
+  try {
+    const storagePath = getTerminalSettingsPath()
+    fs.writeFileSync(storagePath, JSON.stringify(settings, null, 2), 'utf-8')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
 })

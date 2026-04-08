@@ -1,58 +1,92 @@
 <template>
   <div class="topbar">
-    <div class="topbar-left">
-    </div>
+    <!-- 左侧：空白区域（macOS 窗口控制按钮区域） -->
+    <div class="topbar-left"></div>
 
-    <div class="search-container">
-      <div class="search-box">
-        <i class="iconfont icon-search search-icon"></i>
-        <input type="text" placeholder="搜索进程、命令、主机..." class="search-input" />
-        <div class="search-hint">⌘K</div>
-      </div>
-    </div>
-
-    <div class="topbar-right">
-      <!-- 主题选择器 -->
-      <div class="theme-selector">
-        <button class="action-btn theme-btn" @click="showThemeMenu = !showThemeMenu" title="切换主题">
-          <i class="iconfont icon-theme"></i>
-        </button>
-        <div class="theme-menu" v-show="showThemeMenu">
-          <div class="theme-menu-header">终端主题</div>
-          <div
-            class="theme-option"
-            v-for="theme in themeList"
-            :key="theme.key"
-            :class="{ active: currentTheme === theme.key }"
-            @click="selectTheme(theme.key)"
-          >
-            <span class="theme-preview" :style="getThemePreviewStyle(theme.key)"></span>
-            <span class="theme-name">{{ theme.name }}</span>
-            <span class="theme-check" v-if="currentTheme === theme.key">✓</span>
+    <!-- 中央：搜索入口 -->
+    <div class="topbar-center">
+      <div class="search-container" @click="openCommandPalette">
+        <div class="search-box">
+          <div class="search-icon-wrapper">
+            <i class="iconfont icon-search"></i>
           </div>
+          <span class="search-placeholder">命令、主机、AI...</span>
+          <kbd class="search-shortcut">⌘K</kbd>
         </div>
       </div>
-      <button class="action-btn" title="通知">
-        <i class="iconfont icon-notification"></i>
-        <span class="notification-dot"></span>
+    </div>
+
+    <!-- 右侧：工具栏 -->
+    <div class="topbar-right">
+      <button class="action-btn primary" @click="emit('new-session')" title="新建会话">
+        <i class="iconfont icon-plus"></i>
       </button>
-      <button class="action-btn" title="设置" @click="emit('open-settings')">
+      <button class="action-btn" @click="showThemeMenu = !showThemeMenu" title="主题">
+        <i class="iconfont icon-theme"></i>
+      </button>
+
+      <!-- 主题菜单 -->
+      <Transition name="menu-fade">
+        <div class="theme-menu" v-show="showThemeMenu">
+          <div class="theme-menu-header">
+            <span>主题</span>
+          </div>
+          <div class="theme-grid">
+            <div
+              class="theme-card"
+              v-for="theme in themeList"
+              :key="theme.key"
+              :class="{ active: currentTheme === theme.key }"
+              @click="selectTheme(theme.key)"
+            >
+              <span class="theme-preview" :style="getThemePreviewStyle(theme.key)"></span>
+              <span class="theme-name">{{ theme.name }}</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <button class="action-btn" @click="emit('open-settings')" title="设置">
         <i class="iconfont icon-settings"></i>
+      </button>
+
+      <button class="action-btn" @click="toggleFullscreen" title="全屏">
+        <i class="iconfont" :class="isFullscreen ? 'icon-exit-fullscreen' : 'icon-fullscreen'"></i>
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { getThemeList, setTheme, getCurrentThemeName } from '../utils/settingsStore'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { getThemeList, setTheme } from '../utils/settingsStore'
+import { settingsState } from '../utils/settingsStore'
 import { terminalThemes, ThemeKey } from '../utils/themes'
 
-const emit = defineEmits(['open-settings'])
+const emit = defineEmits(['open-settings', 'open-palette', 'new-session'])
 
 const showThemeMenu = ref(false)
+const isFullscreen = ref(false)
 const themeList = getThemeList()
-const currentTheme = ref(getCurrentThemeName())
+
+// 使用响应式状态获取当前主题
+const currentTheme = computed(() => settingsState.theme)
+
+// 打开命令面板
+const openCommandPalette = () => {
+  emit('open-palette')
+}
+
+// 切换全屏
+const toggleFullscreen = () => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen()
+    isFullscreen.value = false
+  } else {
+    document.documentElement.requestFullscreen()
+    isFullscreen.value = true
+  }
+}
 
 // 获取主题预览样式
 const getThemePreviewStyle = (themeKey: string) => {
@@ -68,23 +102,29 @@ const getThemePreviewStyle = (themeKey: string) => {
 // 选择主题
 const selectTheme = (themeKey: string) => {
   setTheme(themeKey)
-  currentTheme.value = themeKey
   showThemeMenu.value = false
 }
 
 // 点击外部关闭菜单
 const handleClickOutside = (e: MouseEvent) => {
-  if (!(e.target as HTMLElement).closest('.theme-selector')) {
+  if (!(e.target as HTMLElement).closest('.theme-menu') && !(e.target as HTMLElement).closest('.action-btn')) {
     showThemeMenu.value = false
   }
 }
 
+// 监听全屏变化
+const handleFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('fullscreenchange', handleFullscreenChange)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('fullscreenchange', handleFullscreenChange)
 })
 </script>
 
@@ -93,236 +133,200 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
-  background: linear-gradient(180deg, #151520 0%, #0f0f16 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 0 20px;
+  min-height: 52px;
+  background: transparent;
+  padding: 0 12px;
   -webkit-app-region: drag;
-  position: relative;
 }
 
-.topbar::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.1), transparent);
-  pointer-events: none;
+/* ========== 三栏布局 ========== */
+.topbar-left {
+  flex: 1;
+  min-width: 80px;
 }
 
-.topbar-left,
-.topbar-right {
+.topbar-center {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+}
+
+.topbar-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
   -webkit-app-region: no-drag;
 }
 
+/* ========== 搜索框 ========== */
 .search-container {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  max-width: 520px;
   -webkit-app-region: no-drag;
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  width: 100%;
-  height: 36px;
-  background: linear-gradient(135deg, rgba(13, 13, 18, 0.8) 0%, rgba(18, 18, 26, 0.8) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  padding: 0 14px;
-  gap: 10px;
+  width: 280px;
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0 12px;
+  gap: 8px;
+  cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
 }
 
-.search-box::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  pointer-events: none;
+.search-box:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(0, 240, 255, 0.12);
 }
 
-.search-box:focus-within {
-  border-color: rgba(0, 240, 255, 0.3);
-  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.1), 0 0 20px rgba(0, 240, 255, 0.1);
-  background: linear-gradient(135deg, rgba(13, 13, 18, 0.95) 0%, rgba(18, 18, 26, 0.95) 100%);
+.search-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 20px;
+  background: rgba(0, 240, 255, 0.1);
+  border-radius: 5px;
+  flex-shrink: 0;
 }
 
-.search-icon {
-  font-size: 14px;
-  color: #6b6b78;
-  transition: color 0.2s ease;
-}
-
-.search-box:focus-within .search-icon {
+.search-icon-wrapper .iconfont {
+  font-size: 11px;
   color: #00f0ff;
 }
 
-.search-input {
+.search-placeholder {
   flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #e5e5e7;
-  font-size: 13px;
-  letter-spacing: 0.3px;
+  color: #5a5a68;
+  font-size: 12px;
 }
 
-.search-input::placeholder {
-  color: #5a5a68;
-}
-
-.search-hint {
-  font-size: 11px;
-  color: #5a5a68;
-  padding: 3px 8px;
-  background: rgba(255, 255, 255, 0.04);
+.search-shortcut {
+  padding: 4px 8px;
+  background: rgba(0, 240, 255, 0.08);
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  letter-spacing: 0.5px;
+  font-size: 10px;
+  color: #00f0ff;
+  font-family: inherit;
+  font-weight: 500;
+  min-height: 20px;
 }
 
+/* ========== 操作按钮 ========== */
 .action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  color: #8b8b9a;
+  color: #6b6b78;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 }
 
 .action-btn:hover {
-  background: rgba(0, 240, 255, 0.08);
-  color: #00f0ff;
+  background: rgba(255, 255, 255, 0.06);
+  color: #a0a0a8;
+}
+
+.action-btn.primary {
+  background: rgba(0, 240, 255, 0.1);
   border-color: rgba(0, 240, 255, 0.15);
-  transform: translateY(-1px);
+  color: #00f0ff;
+}
+
+.action-btn.primary:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: rgba(0, 240, 255, 0.25);
 }
 
 .action-btn .iconfont {
-  font-size: 18px;
+  font-size: 16px;
 }
 
-.notification-dot {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
-  background: linear-gradient(135deg, #ff5f57 0%, #ff3b30 100%);
-  border-radius: 50%;
-  border: 1.5px solid #0f0f16;
-  box-shadow: 0 0 8px rgba(255, 95, 87, 0.6);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
-}
-
-/* 主题选择器 */
-.theme-selector {
-  position: relative;
-}
-
-.theme-btn {
-  position: relative;
-}
-
+/* ========== 主题菜单 ========== */
 .theme-menu {
   position: absolute;
-  top: 44px;
+  top: 48px;
   right: 0;
   width: 200px;
-  background: linear-gradient(135deg, #151520 0%, #0f0f16 100%);
+  background: #14141e;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 8px;
-  z-index: 100;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 240, 255, 0.05);
-}
-
-.theme-menu::before {
-  content: '';
-  position: absolute;
-  top: -6px;
-  right: 12px;
-  width: 12px;
-  height: 12px;
-  background: #151520;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  transform: rotate(45deg);
+  z-index: var(--z-dropdown, 1000);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .theme-menu-header {
-  font-size: 11px;
+  font-size: 10px;
   color: #6b6b78;
-  padding: 8px 12px;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 6px 8px;
+  letter-spacing: 0.3px;
   margin-bottom: 6px;
 }
 
-.theme-option {
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.theme-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #8b8b9a;
+  border: 1px solid transparent;
+  min-height: 44px;
 }
 
-.theme-option:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: #e5e5e7;
+.theme-card:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.theme-option.active {
+.theme-card.active {
   background: rgba(0, 240, 255, 0.08);
-  color: #00f0ff;
+  border-color: rgba(0, 240, 255, 0.15);
 }
 
 .theme-preview {
-  width: 24px;
+  width: 100%;
   height: 24px;
-  border-radius: 6px;
-  flex-shrink: 0;
+  border-radius: 4px;
 }
 
 .theme-name {
-  flex: 1;
-  font-size: 13px;
+  font-size: 10px;
+  color: #8b8b9a;
 }
 
-.theme-check {
-  font-size: 12px;
+.theme-card.active .theme-name {
   color: #00f0ff;
+}
+
+/* ========== 动画 ========== */
+.menu-fade-enter-active,
+.menu-fade-leave-active {
+  transition: all 0.15s ease;
+}
+
+.menu-fade-enter-from,
+.menu-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

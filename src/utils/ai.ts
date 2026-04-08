@@ -27,27 +27,118 @@ const DEFAULT_SETTINGS: AISettings = {
   baseUrl: 'http://localhost:11434'
 }
 
-// 系统提示词
-const SYSTEM_PROMPT = `你是一个终端命令助手。用户会描述一个使用场景，请返回相关的终端命令。
+// 系统提示词生成函数
+const getSystemPrompt = (platform: string): string => {
+  const platformRules: Record<string, string> = {
+    windows: `仅生成 Windows PowerShell 常用命令
+   - 不允许返回 Linux / macOS 命令`,
+    macos: `仅生成 macOS Terminal 常用命令
+   - 不允许返回 Windows / Linux 命令`,
+    linux: `仅生成 Linux Bash 常用命令
+   - 不允许返回 Windows / macOS 命令`,
+    all: `可生成跨平台通用命令`
+  }
 
-返回格式要求（必须是有效的纯JSON数组，不要包含任何注释）：
+  return `你是 ${platform === 'windows' ? 'PowerShell / Windows Terminal' : platform === 'macos' ? 'macOS Terminal' : platform === 'linux' ? 'Linux Bash' : '终端'}命令生成助手。
+
+## 输出格式
+返回纯 JSON 数组，无代码块标记、无注释、无额外文本：
 [
   {
     "name": "命令名称",
-    "command": "实际命令",
-    "description": "命令说明",
-    "platform": "macos/windows/linux/all"
+    "command": "完整可执行命令",
+    "description": "一句话用途说明",
+    "platform": "${platform}"
   }
 ]
 
-规则：
-1. 返回1-5个最相关的命令
-2. 命令要实用、准确
-3. 如果涉及路径或参数，使用占位符如 \${参数名}
-4. platform 根据用户系统返回
-5. 只返回纯JSON数组，不要有其他文字、注释或代码块标记
+## 核心规则
+1. 仅返回 JSON 数组，无其他内容
+2. 每次返回 1-5 个最相关命令
+3. ${platformRules[platform] || platformRules.all}
+4. 字段规范：
+   - name：简洁明确
+   - command：完整可执行命令
+   - description：一句话说明用途
+   - platform：必须是 windows / macos / linux / all 之一
+5. JSON 必须合法：
+   - 不允许注释（// 或 /* */）
+   - 不允许多余逗号
+   - 必须可被 JSON.parse 正确解析
 
-重要：JSON中不要包含任何注释（如 // 或 /* */），必须是可直接解析的标准JSON格式。`
+禁止行为：
+- 不要解释命令
+- 不要输出示例
+- 不要输出多段文本
+- 不要返回无效 JSON
+- 不要混用多个操作系统命令
+- 不要生成虚假或不可执行命令
+- 不要展示思考过程
+- 不要解释步骤
+- 只输出最终答案`
+}
+
+// 保留旧的 SYSTEM_PROMPT 供旧代码兼容（已废弃）
+const SYSTEM_PROMPT = getSystemPrompt('windows')
+
+// 解析 AI 响应的通用函数
+function parseAIResponse(content: string, platform: string): Command[] {
+  console.log('[AI] Raw response:', content)
+
+  try {
+    // 1. 尝试提取 JSON 数组
+    const jsonMatch = content.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      try {
+        let jsonStr = jsonMatch[0]
+        // 移除 JSON 中的注释
+        jsonStr = jsonStr.replace(/\/\/[^\n]*\n/g, '\n')
+        jsonStr = jsonStr.replace(/\/\/[^\n,}\]]*/g, '')
+        const parsed = JSON.parse(jsonStr)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+        }
+      } catch (e) {
+        console.warn('[AI] JSON parse failed, trying other formats')
+      }
+    }
+
+    // 2. 尝试提取代码块中的命令（```powershell ... ``` 或 ```bash ... ```）
+    const codeBlockMatch = content.match(/```(?:powershell|bash|sh|shell|cmd)?\s*([\s\S]*?)```/i)
+    if (codeBlockMatch) {
+      const command = codeBlockMatch[1].trim()
+      if (command) {
+        return [{
+          name: '命令',
+          command: command,
+          description: '根据您的需求生成的命令',
+          platform: platform
+        }]
+      }
+    }
+
+    // 3. 尝试提取纯命令（以换行分隔的多条命令）
+    const lines = content.split('\n').filter(line => line.trim() && !line.startsWith('#') && !line.startsWith('//'))
+    if (lines.length > 0) {
+      // 检查是否看起来像命令（包含常见命令字符）
+      const commands = lines.filter(line => /^[a-zA-Z$\-_\/\\]/.test(line.trim()))
+      if (commands.length > 0) {
+        return commands.slice(0, 5).map((cmd, index) => ({
+          name: `命令 ${index + 1}`,
+          command: cmd.trim(),
+          description: '根据您的需求生成的命令',
+          platform: platform
+        }))
+      }
+    }
+
+    console.error('[AI] Failed to parse response:', content)
+    return []
+  } catch (e) {
+    console.error('[AI] Parse error:', e)
+    return []
+  }
+}
 
 // Claude Provider
 class ClaudeProvider implements AIProvider {
@@ -70,11 +161,11 @@ class ClaudeProvider implements AIProvider {
       body: JSON.stringify({
         model: this.model,
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
+        system: getSystemPrompt(platform),
         messages: [
           {
             role: 'user',
-            content: `用户场景：${prompt}\n系统平台：${platform}`
+            content: `用户场景：${prompt}`
           }
         ]
       })
@@ -88,27 +179,7 @@ class ClaudeProvider implements AIProvider {
     const data = await response.json()
     const content = data.content[0]?.text || '[]'
 
-    return this.parseResponse(content)
-  }
-
-  private parseResponse(content: string): Command[] {
-    try {
-      // 尝试提取 JSON 数组
-      const jsonMatch = content.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
-        // 移除 JSON 中的注释（AI 可能返回带注释的 JSON）
-        let jsonStr = jsonMatch[0]
-        // 移除单行注释 // ...
-        jsonStr = jsonStr.replace(/\/\/[^\n]*\n/g, '\n')
-        // 移除行内注释 // ...
-        jsonStr = jsonStr.replace(/\/\/[^\n,}\]]*/g, '')
-        return JSON.parse(jsonStr)
-      }
-      return JSON.parse(content)
-    } catch (e) {
-      console.error('Failed to parse AI response:', content, e)
-      return []
-    }
+    return parseAIResponse(content, platform)
   }
 }
 
@@ -136,11 +207,11 @@ class OpenAIProvider implements AIProvider {
         messages: [
           {
             role: 'system',
-            content: SYSTEM_PROMPT
+            content: getSystemPrompt(platform)
           },
           {
             role: 'user',
-            content: `用户场景：${prompt}\n系统平台：${platform}`
+            content: `用户场景：${prompt}`
           }
         ],
         temperature: 0.7,
@@ -156,27 +227,7 @@ class OpenAIProvider implements AIProvider {
     const data = await response.json()
     const content = data.choices[0]?.message?.content || '[]'
 
-    return this.parseResponse(content)
-  }
-
-  private parseResponse(content: string): Command[] {
-    try {
-      // 尝试提取 JSON 数组
-      const jsonMatch = content.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
-        // 移除 JSON 中的注释（AI 可能返回带注释的 JSON）
-        let jsonStr = jsonMatch[0]
-        // 移除单行注释 // ...
-        jsonStr = jsonStr.replace(/\/\/[^\n]*\n/g, '\n')
-        // 移除行内注释 // ...
-        jsonStr = jsonStr.replace(/\/\/[^\n,}\]]*/g, '')
-        return JSON.parse(jsonStr)
-      }
-      return JSON.parse(content)
-    } catch (e) {
-      console.error('Failed to parse AI response:', content, e)
-      return []
-    }
+    return parseAIResponse(content, platform)
   }
 }
 
@@ -192,7 +243,7 @@ class OllamaProvider implements AIProvider {
   }
 
   async generateCommands(prompt: string, platform: string): Promise<Command[]> {
-    const fullPrompt = `${SYSTEM_PROMPT}\n\n用户场景：${prompt}\n系统平台：${platform}`
+    const fullPrompt = `${getSystemPrompt(platform)}\n\n用户场景：${prompt}`
 
     // 创建超时控制器
     const controller = new AbortController()
@@ -220,7 +271,7 @@ class OllamaProvider implements AIProvider {
       const data = await response.json()
       const content = data.response || '[]'
 
-      return this.parseResponse(content)
+      return parseAIResponse(content, platform)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
         throw new Error('Ollama API 调用超时，请检查服务是否正常运行')
@@ -230,54 +281,55 @@ class OllamaProvider implements AIProvider {
       clearTimeout(timeoutId)
     }
   }
-
-  private parseResponse(content: string): Command[] {
-    try {
-      // 尝试提取 JSON 数组
-      const jsonMatch = content.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
-        // 移除 JSON 中的注释（AI 可能返回带注释的 JSON）
-        let jsonStr = jsonMatch[0]
-        // 移除单行注释 // ...
-        jsonStr = jsonStr.replace(/\/\/[^\n]*\n/g, '\n')
-        // 移除行内注释 // ...
-        jsonStr = jsonStr.replace(/\/\/[^\n,}\]]*/g, '')
-        return JSON.parse(jsonStr)
-      }
-      return JSON.parse(content)
-    } catch (e) {
-      console.error('Failed to parse AI response:', content, e)
-      return []
-    }
-  }
 }
 
 // AI 服务管理器
 class AIService {
   private settings: AISettings
   private provider: AIProvider | null = null
+  private loadPromise: Promise<void> | null = null
 
   constructor() {
-    this.settings = this.loadSettings()
+    this.settings = DEFAULT_SETTINGS
+    this.loadPromise = this.loadSettingsAsync()
   }
 
-  // 加载设置
-  loadSettings(): AISettings {
+  // 异步加载设置
+  private async loadSettingsAsync(): Promise<void> {
     try {
-      const saved = localStorage.getItem('ai-settings')
-      if (saved) {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
+      const result = await window.electronAPI.getAISettings()
+      if (result.success && result.data) {
+        this.settings = { ...DEFAULT_SETTINGS, ...result.data as AISettings }
+        console.log('[AI] Settings loaded:', this.settings)
       }
-    } catch {
-      console.error('Failed to load AI settings')
+    } catch (e) {
+      console.error('Failed to load AI settings:', e)
     }
-    return { ...DEFAULT_SETTINGS }
+  }
+
+  // 等待设置加载完成
+  async waitForSettings(): Promise<AISettings> {
+    if (this.loadPromise) {
+      await this.loadPromise
+    }
+    return this.getSettings()
+  }
+
+  // 同步加载设置（用于初始化，返回默认值后异步更新）
+  loadSettings(): AISettings {
+    return { ...this.settings }
   }
 
   // 保存设置
-  saveSettings(settings: Partial<AISettings>): void {
+  async saveSettings(settings: Partial<AISettings>): Promise<void> {
     this.settings = { ...this.settings, ...settings }
-    localStorage.setItem('ai-settings', JSON.stringify(this.settings))
+    try {
+      const plainSettings = JSON.parse(JSON.stringify(this.settings))
+      await window.electronAPI.saveAISettings(plainSettings)
+      console.log('[AI] Settings saved:', plainSettings)
+    } catch (e) {
+      console.error('Failed to save AI settings:', e)
+    }
     this.provider = null // 重置 provider
   }
 

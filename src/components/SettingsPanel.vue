@@ -1,16 +1,27 @@
 <template>
   <div class="settings-panel">
+    <!-- 头部 + 搜索 -->
     <div class="settings-header">
       <h2 class="settings-title">设置</h2>
-      <p class="settings-desc">配置终端外观和行为</p>
+      <div class="search-wrapper">
+        <i class="iconfont icon-search"></i>
+        <input
+          type="text"
+          v-model="searchQuery"
+          class="settings-search"
+          placeholder="搜索设置..."
+        />
+        <kbd v-if="!searchQuery">/</kbd>
+      </div>
     </div>
 
     <div class="settings-content">
       <!-- 主题设置 -->
-      <section class="settings-section">
+      <section class="settings-section" v-show="matchesSearch('主题 外观 颜色')">
         <div class="section-header">
           <i class="iconfont icon-theme section-icon"></i>
           <h3 class="section-title">终端主题</h3>
+          <span class="section-badge">{{ themeList.length }} 个主题</span>
         </div>
         <div class="section-desc">选择终端的颜色主题，更改后立即生效</div>
         <div class="theme-grid">
@@ -22,39 +33,39 @@
             @click="selectTheme(theme.key)"
           >
             <div class="theme-preview" :style="getThemePreviewStyle(theme.key)">
-              <div class="preview-line">
-                <span :style="{ color: getThemeColor(theme.key, 'green') }">$</span>
-                <span :style="{ color: getThemeColor(theme.key, 'cyan') }">ls</span>
-                <span :style="{ color: getThemeColor(theme.key, 'brightBlack') }">-la</span>
+              <div class="preview-header">
+                <span class="preview-dot" :style="{ background: getThemeColor(theme.key, 'red') }"></span>
+                <span class="preview-dot" :style="{ background: getThemeColor(theme.key, 'yellow') }"></span>
+                <span class="preview-dot" :style="{ background: getThemeColor(theme.key, 'green') }"></span>
+                <span class="preview-title">{{ theme.name }}</span>
               </div>
-              <div class="preview-line">
-                <span :style="{ color: getThemeColor(theme.key, 'brightBlue') }">drwxr</span>
-                <span :style="{ color: getThemeColor(theme.key, 'brightGreen') }">src/</span>
-                <span :style="{ color: getThemeColor(theme.key, 'brightYellow') }">package.json</span>
-              </div>
-              <div class="preview-line">
-                <span :style="{ color: getThemeColor(theme.key, 'brightCyan') }">-rw-r</span>
-                <span :style="{ color: getThemeColor(theme.key, 'brightMagenta') }">README.md</span>
-                <span :style="{ color: getThemeColor(theme.key, 'white') }">.gitignore</span>
-              </div>
-              <div class="preview-line">
-                <span :style="{ color: getThemeColor(theme.key, 'red') }">error:</span>
-                <span :style="{ color: getThemeColor(theme.key, 'brightRed') }">文件未找到</span>
+              <div class="preview-content">
+                <div class="preview-line">
+                  <span class="prompt" :style="{ color: getThemeColor(theme.key, 'green') }">→</span>
+                  <span :style="{ color: getThemeColor(theme.key, 'cyan') }">npm</span>
+                  <span :style="{ color: getThemeColor(theme.key, 'white') }">run dev</span>
+                </div>
+                <div class="preview-line">
+                  <span :style="{ color: getThemeColor(theme.key, 'brightBlue') }">✓</span>
+                  <span :style="{ color: getThemeColor(theme.key, 'brightGreen') }">Compiled</span>
+                  <span :style="{ color: getThemeColor(theme.key, 'brightBlack') }">successfully</span>
+                </div>
+                <div class="preview-line">
+                  <span :style="{ color: getThemeColor(theme.key, 'brightYellow') }">⚡</span>
+                  <span :style="{ color: getThemeColor(theme.key, 'magenta') }">Ready</span>
+                  <span :style="{ color: getThemeColor(theme.key, 'cyan') }">in 2.3s</span>
+                </div>
               </div>
             </div>
-            <div class="theme-info">
-              <div class="theme-meta">
-                <span class="theme-name">{{ theme.name }}</span>
-                <span class="theme-desc" v-if="theme.description">{{ theme.description }}</span>
-              </div>
-              <span class="theme-check" v-if="currentTheme === theme.key">✓</span>
+            <div class="theme-check" v-if="currentTheme === theme.key">
+              <i class="iconfont icon-check"></i>
             </div>
           </div>
         </div>
       </section>
 
       <!-- 字体设置 -->
-      <section class="settings-section">
+      <section class="settings-section" v-show="matchesSearch('字体 大小 类型')">
         <div class="section-header">
           <i class="iconfont icon-terminal section-icon"></i>
           <h3 class="section-title">终端字体</h3>
@@ -69,18 +80,32 @@
         </div>
         <div class="setting-item">
           <label class="setting-label">字体族</label>
-          <select :value="fontFamily" @change="updateFontFamily($event)" class="setting-select">
-            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
-            <option value="'Fira Code', monospace">Fira Code</option>
-            <option value="'SF Mono', monospace">SF Mono</option>
-            <option value="'Consolas', monospace">Consolas</option>
-            <option value="'Courier New', monospace">Courier New</option>
-          </select>
+          <div class="custom-select-wrapper">
+            <button class="custom-select-trigger" @click="showFontDropdown = !showFontDropdown">
+              <span>{{ getFontDisplayName(fontFamily) }}</span>
+              <i class="iconfont icon-chevron-down"></i>
+            </button>
+            <Transition name="dropdown">
+              <div class="custom-select-dropdown" v-if="showFontDropdown">
+                <div
+                  class="select-option"
+                  v-for="font in fontOptions"
+                  :key="font.value"
+                  :class="{ active: fontFamily === font.value }"
+                  @click="selectFont(font.value)"
+                >
+                  <span class="option-preview" :style="{ fontFamily: font.value }">Aa</span>
+                  <span class="option-name">{{ font.label }}</span>
+                  <i class="iconfont icon-check" v-if="fontFamily === font.value"></i>
+                </div>
+              </div>
+            </Transition>
+          </div>
         </div>
       </section>
 
       <!-- 行为设置 -->
-      <section class="settings-section">
+      <section class="settings-section" v-show="matchesSearch('行为 光标 复制 自动')">
         <div class="section-header">
           <i class="iconfont icon-bolt section-icon"></i>
           <h3 class="section-title">终端行为</h3>
@@ -100,11 +125,116 @@
         </div>
         <div class="setting-item">
           <label class="setting-label">光标样式</label>
-          <select :value="cursorStyle" @change="updateCursorStyle($event)" class="setting-select">
-            <option value="block">方块</option>
-            <option value="underline">下划线</option>
-            <option value="bar">竖线</option>
-          </select>
+          <div class="custom-select-wrapper">
+            <button class="custom-select-trigger small" @click="showCursorDropdown = !showCursorDropdown">
+              <span>{{ cursorStyleLabels[cursorStyle] }}</span>
+              <i class="iconfont icon-chevron-down"></i>
+            </button>
+            <Transition name="dropdown">
+              <div class="custom-select-dropdown small" v-if="showCursorDropdown">
+                <div
+                  class="select-option"
+                  v-for="(label, key) in cursorStyleLabels"
+                  :key="key"
+                  :class="{ active: cursorStyle === key }"
+                  @click="selectCursorStyle(key as 'block' | 'underline' | 'bar')"
+                >
+                  <span class="cursor-preview" :class="'cursor-' + key"></span>
+                  <span class="option-name">{{ label }}</span>
+                  <i class="iconfont icon-check" v-if="cursorStyle === key"></i>
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </div>
+      </section>
+
+      <!-- 布局设置 -->
+      <section class="settings-section" v-show="matchesSearch('布局 侧边栏 紧凑 主题色')">
+        <div class="section-header">
+          <i class="iconfont icon-size section-icon"></i>
+          <h3 class="section-title">布局设置</h3>
+        </div>
+        <div class="section-desc">自定义应用布局</div>
+        <div class="setting-item">
+          <label class="setting-label">侧边栏位置</label>
+          <div class="custom-select-wrapper">
+            <button class="custom-select-trigger small" @click="showLayoutDropdown = !showLayoutDropdown">
+              <span>{{ layoutState.sidebarPosition === 'left' ? '左侧' : '右侧' }}</span>
+              <i class="iconfont icon-chevron-down"></i>
+            </button>
+            <Transition name="dropdown">
+              <div class="custom-select-dropdown small" v-if="showLayoutDropdown">
+                <div
+                  class="select-option"
+                  :class="{ active: layoutState.sidebarPosition === 'left' }"
+                  @click="updateLayoutSetting('sidebarPosition', 'left'); showLayoutDropdown = false"
+                >
+                  <span class="option-name">左侧</span>
+                  <i class="iconfont icon-check" v-if="layoutState.sidebarPosition === 'left'"></i>
+                </div>
+                <div
+                  class="select-option"
+                  :class="{ active: layoutState.sidebarPosition === 'right' }"
+                  @click="updateLayoutSetting('sidebarPosition', 'right'); showLayoutDropdown = false"
+                >
+                  <span class="option-name">右侧</span>
+                  <i class="iconfont icon-check" v-if="layoutState.sidebarPosition === 'right'"></i>
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label">紧凑模式</label>
+          <div class="toggle-switch" :class="{ active: layoutState.compactMode }" @click="updateLayoutSetting('compactMode', !layoutState.compactMode)">
+            <div class="toggle-slider"></div>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label">自定义主题色</label>
+          <div class="color-picker-group">
+            <input
+              type="color"
+              :value="layoutState.customThemeColor || '#00f0ff'"
+              @input="setCustomThemeColor($event.target.value)"
+              class="color-picker"
+            />
+            <button
+              class="reset-color-btn"
+              @click="setCustomThemeColor(null)"
+              v-if="layoutState.customThemeColor"
+            >
+              重置
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 性能设置 -->
+      <section class="settings-section" v-show="matchesSearch('性能 内存 阈值 告警')">
+        <div class="section-header">
+          <i class="iconfont icon-cpu section-icon"></i>
+          <h3 class="section-title">性能设置</h3>
+        </div>
+        <div class="section-desc">配置内存告警阈值</div>
+        <div class="setting-item">
+          <label class="setting-label">警告阈值 (%)</label>
+          <div class="setting-control">
+            <input type="range" min="40" max="80" :value="perfThresholds.warning" @input="updateWarningThreshold($event)" class="range-slider" />
+            <span class="range-value">{{ perfThresholds.warning }}%</span>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label">严重阈值 (%)</label>
+          <div class="setting-control">
+            <input type="range" min="60" max="95" :value="perfThresholds.critical" @input="updateCriticalThreshold($event)" class="range-slider" />
+            <span class="range-value">{{ perfThresholds.critical }}%</span>
+          </div>
+        </div>
+        <div class="threshold-hint">
+          <i class="iconfont icon-info"></i>
+          <span>内存占用超过阈值时会显示警告提示</span>
         </div>
       </section>
     </div>
@@ -120,21 +250,68 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   initSettings,
   getSettings,
   updateSetting,
   resetSettings,
   getThemeList,
-  getCurrentThemeName,
   settingsState
 } from '../utils/settingsStore'
 import { terminalThemes } from '../utils/themes'
+import {
+  initLayout,
+  layoutState,
+  updateLayoutSetting,
+  setCustomThemeColor
+} from '../utils/layoutStore'
+import {
+  loadThresholds,
+  thresholds as perfThresholds,
+  saveThresholds
+} from '../utils/performanceMonitor'
+
+// 搜索
+const searchQuery = ref('')
+
+const matchesSearch = (keywords: string) => {
+  if (!searchQuery.value) return true
+  const query = searchQuery.value.toLowerCase()
+  return keywords.toLowerCase().includes(query)
+}
+
+// 下拉菜单状态
+const showFontDropdown = ref(false)
+const showCursorDropdown = ref(false)
+const showLayoutDropdown = ref(false)
+
+// 字体选项
+const fontOptions = [
+  { value: "'JetBrains Mono', monospace", label: 'JetBrains Mono' },
+  { value: "'Fira Code', monospace", label: 'Fira Code' },
+  { value: "'SF Mono', monospace", label: 'SF Mono' },
+  { value: "'Consolas', monospace", label: 'Consolas' },
+  { value: "'Courier New', monospace", label: 'Courier New' }
+]
+
+const getFontDisplayName = (value: string) => {
+  const font = fontOptions.find(f => f.value === value)
+  return font?.label || 'JetBrains Mono'
+}
+
+// 光标样式标签
+const cursorStyleLabels: Record<string, string> = {
+  block: '方块',
+  underline: '下划线',
+  bar: '竖线'
+}
 
 // 初始化设置
-onMounted(() => {
-  initSettings()
+onMounted(async () => {
+  await initSettings()
+  initLayout()
+  loadThresholds()
 })
 
 // 获取设置
@@ -146,7 +323,9 @@ const fontFamily = computed(() => settings.fontFamily)
 const autoCopy = computed(() => settings.autoCopy)
 const cursorBlink = computed(() => settings.cursorBlink)
 const cursorStyle = computed(() => settings.cursorStyle)
-const currentTheme = computed(() => getCurrentThemeName())
+
+// 使用响应式状态获取当前主题
+const currentTheme = computed(() => settingsState.theme)
 const themeList = getThemeList()
 
 // 获取主题颜色
@@ -177,10 +356,10 @@ const updateFontSize = (event: Event) => {
   updateSetting('fontSize', value)
 }
 
-// 更新字体族
-const updateFontFamily = (event: Event) => {
-  const value = (event.target as HTMLSelectElement).value
+// 选择字体
+const selectFont = (value: string) => {
   updateSetting('fontFamily', value)
+  showFontDropdown.value = false
 }
 
 // 切换自动复制
@@ -193,10 +372,26 @@ const toggleCursorBlink = () => {
   updateSetting('cursorBlink', !cursorBlink.value)
 }
 
-// 更新光标样式
-const updateCursorStyle = (event: Event) => {
-  const value = (event.target as HTMLSelectElement).value as 'block' | 'underline' | 'bar'
+// 选择光标样式
+const selectCursorStyle = (value: 'block' | 'underline' | 'bar') => {
   updateSetting('cursorStyle', value)
+  showCursorDropdown.value = false
+}
+
+// 更新内存警告阈值
+const updateWarningThreshold = (event: Event) => {
+  const value = parseInt((event.target as HTMLInputElement).value)
+  if (value < perfThresholds.value.critical) {
+    saveThresholds({ warning: value })
+  }
+}
+
+// 更新内存严重阈值
+const updateCriticalThreshold = (event: Event) => {
+  const value = parseInt((event.target as HTMLInputElement).value)
+  if (value > perfThresholds.value.warning) {
+    saveThresholds({ critical: value })
+  }
 }
 
 // 重置设置
@@ -210,37 +405,79 @@ const handleReset = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #0a0a0f 0%, #0f0f16 100%);
+  background: var(--color-bg-base, #0a0a0f);
   overflow: hidden;
 }
 
 .settings-header {
-  padding: 32px 40px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 24px 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 .settings-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
-  color: #e5e5e7;
-  margin-bottom: 8px;
-  letter-spacing: -0.5px;
+  color: var(--color-text-primary, #e5e5e7);
+  letter-spacing: -0.3px;
 }
 
-.settings-desc {
-  font-size: 13px;
-  color: #6b6b78;
-  letter-spacing: 0.3px;
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  flex: 1;
+  max-width: 280px;
+  transition: all 0.2s ease;
+}
+
+.search-wrapper:focus-within {
+  border-color: rgba(0, 240, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.search-wrapper .iconfont {
+  font-size: 12px;
+  color: var(--color-text-tertiary, #6b6b78);
+}
+
+.settings-search {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-text-primary, #e5e5e7);
+  font-size: 12px;
+}
+
+.settings-search::placeholder {
+  color: var(--color-text-disabled, #5a5a68);
+}
+
+.search-wrapper kbd {
+  padding: 2px 6px;
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.05));
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--color-text-tertiary, #6b6b78);
 }
 
 .settings-content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 40px;
+  padding: 20px 32px;
 }
 
 .settings-content::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .settings-content::-webkit-scrollbar-track {
@@ -248,161 +485,175 @@ const handleReset = () => {
 }
 
 .settings-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
 }
 
-.settings-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 240, 255, 0.3);
-}
-
 .settings-section {
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .section-icon {
-  font-size: 18px;
-  color: #00f0ff;
-  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.3));
+  font-size: 16px;
+  color: #8b5cf6;
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: #e5e5e7;
+  color: var(--color-text-primary, #e5e5e7);
+}
+
+.section-badge {
+  font-size: 10px;
+  color: var(--color-text-tertiary, #6b6b78);
+  padding: 2px 8px;
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.04));
+  border-radius: 10px;
+  margin-left: auto;
 }
 
 .section-desc {
-  font-size: 12px;
-  color: #5a5a68;
-  margin-bottom: 20px;
-  padding-left: 30px;
+  font-size: 11px;
+  color: var(--color-text-disabled, #5a5a68);
+  margin-bottom: 16px;
+  padding-left: 26px;
 }
 
-/* 主题网格 */
+/* ========== 主题网格 ========== */
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .theme-card {
+  position: relative;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
+  overflow: hidden;
 }
 
 .theme-card:hover {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
 }
 
 .theme-card.active {
-  background: rgba(0, 240, 255, 0.08);
-  border-color: rgba(0, 240, 255, 0.25);
-  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.15);
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
 }
 
 .theme-preview {
-  height: 80px;
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 12px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  height: 120px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.preview-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.preview-title {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--color-text-tertiary, #6b6b78);
+  font-family: inherit;
+}
+
+.preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
 }
 
 .preview-line {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-.theme-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.theme-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.theme-name {
-  font-size: 13px;
-  color: #8b8b9a;
-  font-weight: 500;
-}
-
-.theme-desc {
-  font-size: 10px;
-  color: #5a5a68;
-}
-
-.theme-card.active .theme-name {
-  color: #00f0ff;
-}
-
-.theme-card.active .theme-desc {
-  color: #6b8b9a;
-}
-
-.theme-check {
-  font-size: 14px;
-  color: #00f0ff;
+.preview-line .prompt {
   font-weight: 600;
 }
 
-/* 设置项 */
+.theme-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-check .iconfont {
+  font-size: 11px;
+  color: #a78bfa;
+}
+
+/* ========== 设置项 ========== */
 .setting-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 14px 16px;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 8px;
   transition: all 0.2s ease;
 }
 
 .setting-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.08);
 }
 
 .setting-label {
-  font-size: 14px;
-  color: #e5e5e7;
+  font-size: 13px;
+  color: var(--color-text-primary, #e5e5e7);
   font-weight: 500;
 }
 
 .setting-control {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .range-slider {
-  width: 120px;
-  height: 4px;
+  width: 100px;
+  height: 3px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   appearance: none;
@@ -411,92 +662,255 @@ const handleReset = () => {
 
 .range-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #00f0ff;
+  width: 14px;
+  height: 14px;
+  background: #8b5cf6;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
-  transition: all 0.2s ease;
-}
-
-.range-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
 .range-value {
-  font-size: 13px;
-  color: #00f0ff;
+  font-size: 12px;
+  color: #a78bfa;
   font-weight: 500;
-  min-width: 40px;
+  min-width: 36px;
   text-align: right;
 }
 
-.setting-select {
+/* ========== 自定义下拉组件 ========== */
+.custom-select-wrapper {
+  position: relative;
+}
+
+.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
-  background: rgba(13, 13, 18, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 140px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   color: #e5e5e7;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
-  outline: none;
   transition: all 0.2s ease;
 }
 
-.setting-select:hover {
-  background: rgba(18, 18, 26, 0.95);
-  border-color: rgba(0, 240, 255, 0.2);
+.custom-select-trigger.small {
+  min-width: 100px;
+  padding: 6px 10px;
+  font-size: 11px;
 }
 
-.setting-select:focus {
-  border-color: rgba(0, 240, 255, 0.3);
-  box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.1);
+.custom-select-trigger:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(139, 92, 246, 0.2);
 }
 
-.setting-select option {
-  background: #12121a;
-  color: #e5e5e7;
-  padding: 8px 12px;
+.custom-select-trigger .iconfont {
+  font-size: 10px;
+  color: #6b6b78;
+  margin-left: auto;
 }
 
-/* 开关 */
+.custom-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  background: var(--color-bg-elevated, #14141e);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  padding: 4px;
+  z-index: var(--z-dropdown, 1000);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.4));
+}
+
+.custom-select-dropdown.small {
+  min-width: 120px;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+  min-height: 44px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--color-text-tertiary, #8b8b9a);
+  font-size: 12px;
+}
+
+.select-option:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.05));
+  color: var(--color-text-primary, #e5e5e7);
+}
+
+.select-option.active {
+  background: rgba(139, 92, 246, 0.1);
+  color: #c4b5fd;
+}
+
+.option-preview {
+  font-size: 14px;
+  font-weight: 600;
+  color: #a78bfa;
+  width: 24px;
+  text-align: center;
+}
+
+.option-name {
+  flex: 1;
+}
+
+.select-option .iconfont {
+  font-size: 11px;
+  color: #a78bfa;
+}
+
+.cursor-preview {
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  position: relative;
+}
+
+.cursor-preview.cursor-block::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  background: #8b5cf6;
+  border-radius: 2px;
+}
+
+.cursor-preview.cursor-underline::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  width: 10px;
+  height: 2px;
+  background: #8b5cf6;
+  border-radius: 1px;
+}
+
+.cursor-preview.cursor-bar::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  width: 2px;
+  height: 10px;
+  background: #8b5cf6;
+  border-radius: 1px;
+}
+
+/* ========== 开关 ========== */
 .toggle-switch {
   width: 44px;
   height: 24px;
+  padding: 10px 0;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   cursor: pointer;
   position: relative;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toggle-switch.active {
-  background: rgba(0, 240, 255, 0.2);
+  background: rgba(139, 92, 246, 0.25);
 }
 
 .toggle-slider {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
+  top: 4px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
   background: #6b6b78;
   border-radius: 50%;
   transition: all 0.3s ease;
 }
 
 .toggle-switch.active .toggle-slider {
-  left: 23px;
-  background: #00f0ff;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  left: 24px;
+  background: #a78bfa;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
 }
 
-/* 底部 */
+/* ========== 颜色选择器 ========== */
+.color-picker-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-picker {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-picker::-webkit-color-swatch {
+  border-radius: 3px;
+  border: none;
+}
+
+.reset-color-btn {
+  padding: 5px 10px;
+  background: rgba(255, 95, 87, 0.1);
+  border: 1px solid rgba(255, 95, 87, 0.2);
+  border-radius: 5px;
+  color: #ff5f57;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* ========== 阈值提示 ========== */
+.threshold-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.threshold-hint .iconfont {
+  font-size: 12px;
+  color: #8b5cf6;
+}
+
+.threshold-hint span {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #8b8b9a);
+}
+
+/* ========== 底部 ========== */
 .settings-footer {
-  padding: 20px 40px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 16px 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -505,28 +919,40 @@ const handleReset = () => {
 .reset-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 6px;
+  padding: 8px 16px;
   background: rgba(255, 95, 87, 0.08);
-  border: 1px solid rgba(255, 95, 87, 0.2);
-  border-radius: 8px;
+  border: 1px solid rgba(255, 95, 87, 0.15);
+  border-radius: 6px;
   color: #ff5f57;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .reset-btn:hover {
-  background: rgba(255, 95, 87, 0.15);
-  border-color: rgba(255, 95, 87, 0.3);
+  background: rgba(255, 95, 87, 0.12);
+  border-color: rgba(255, 95, 87, 0.25);
 }
 
 .reset-btn .iconfont {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .save-hint {
-  font-size: 12px;
-  color: #5a5a68;
+  font-size: 11px;
+  color: var(--color-text-disabled, #5a5a68);
+}
+
+/* ========== 动画 ========== */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.15s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

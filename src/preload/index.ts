@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer, clipboard } from 'electron'
-import type { SystemInfo, SshConfig, EncryptResult, DecryptResult } from '../types/electron'
+import type { SystemInfo, SshConfig, EncryptResult, DecryptResult, StorageResult, SshHost } from '../types/electron'
+
+// 通知主进程 preload 已加载
+ipcRenderer.send('preload-loaded')
+
+console.log('[Preload] Starting preload script...')
+console.log('[Preload] contextBridge available:', !!contextBridge)
 
 // 存储每个终端的监听器
 interface ListenerInfo {
@@ -34,6 +40,7 @@ interface ElectronAPI {
   onPtyExit: (callback: PtyExitCallback) => number
   removePtyListener: (id: number) => void
   getPlatform: () => Promise<string>
+  getCpuUsage: () => Promise<number>
   getSystemInfo: () => Promise<SystemInfo>
   clipboardWrite: (text: string) => void
   clipboardRead: () => string
@@ -48,6 +55,15 @@ interface ElectronAPI {
   // 密码加密相关
   encryptPassword: (password: string) => Promise<EncryptResult>
   decryptPassword: (encrypted: string) => Promise<DecryptResult>
+  // 主机存储相关
+  getHosts: () => Promise<StorageResult>
+  saveHosts: (hosts: SshHost[]) => Promise<{ success: boolean; error?: string }>
+  // AI 设置存储相关
+  getAISettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
+  saveAISettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
+  // 终端设置存储相关
+  getTerminalSettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
+  saveTerminalSettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
 }
 
 // 暴露安全的 API 到渲染进程
@@ -86,6 +102,9 @@ const electronAPI: ElectronAPI = {
 
   // 平台信息
   getPlatform: () => ipcRenderer.invoke('get-platform'),
+
+  // CPU 使用率
+  getCpuUsage: () => ipcRenderer.invoke('get-cpu-usage'),
 
   // 系统信息
   getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
@@ -127,7 +146,20 @@ const electronAPI: ElectronAPI = {
 
   // 密码加密相关
   encryptPassword: (password: string) => ipcRenderer.invoke('encrypt-password', password),
-  decryptPassword: (encrypted: string) => ipcRenderer.invoke('decrypt-password', encrypted)
+  decryptPassword: (encrypted: string) => ipcRenderer.invoke('decrypt-password', encrypted),
+
+  // 主机存储相关
+  getHosts: () => ipcRenderer.invoke('get-hosts'),
+  saveHosts: (hosts: SshHost[]) => ipcRenderer.invoke('save-hosts', hosts),
+
+  // AI 设置存储相关
+  getAISettings: () => ipcRenderer.invoke('get-ai-settings'),
+  saveAISettings: (settings: unknown) => ipcRenderer.invoke('save-ai-settings', settings),
+
+  // 终端设置存储相关
+  getTerminalSettings: () => ipcRenderer.invoke('get-terminal-settings'),
+  saveTerminalSettings: (settings: unknown) => ipcRenderer.invoke('save-terminal-settings', settings)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
+console.log('[Preload] electronAPI exposed to main world successfully!')

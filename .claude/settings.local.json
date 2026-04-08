@@ -12,7 +12,11 @@
       "Bash(npx vue-tsc:*)",
       "mcp__ide__getDiagnostics",
       "WebFetch(domain:github.com)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(tasklist)",
+      "Bash(taskkill /F /IM electron.exe taskkill /F /IM node.exe sleep 3 echo \"=== 进程已清理 ===\" netstat -ano)",
+      "Bash(taskkill /F /PID 24876 taskkill /F /PID 25304 taskkill /F /PID 5580 sleep 2 netstat -ano)",
+      "Bash(npx electron-vite:*)"
     ]
   }
 }

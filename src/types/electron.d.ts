@@ -47,6 +47,27 @@ interface DecryptResult {
   error?: string
 }
 
+// 存储相关类型
+interface StorageResult {
+  success: boolean
+  data?: SshHost[]
+  error?: string
+}
+
+// SSH 主机配置类型
+interface SshHost {
+  id: number | string
+  name: string
+  host: string
+  port: number
+  username: string
+  authType: 'password' | 'key'
+  password?: string
+  privateKey?: string
+  savePassword: boolean
+  protocol: string
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -61,6 +82,7 @@ declare global {
 
       // 平台和系统信息
       getPlatform: () => Promise<string>
+      getCpuUsage: () => Promise<number>
       getSystemInfo: () => Promise<SystemInfo>
 
       // 剪贴板
@@ -79,8 +101,20 @@ declare global {
       // 密码加密相关
       encryptPassword: (password: string) => Promise<EncryptResult>
       decryptPassword: (encrypted: string) => Promise<DecryptResult>
+
+      // 主机存储相关
+      getHosts: () => Promise<StorageResult>
+      saveHosts: (hosts: SshHost[]) => Promise<{ success: boolean; error?: string }>
+
+      // AI 设置存储相关
+      getAISettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
+      saveAISettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
+
+      // 终端设置存储相关
+      getTerminalSettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
+      saveTerminalSettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
     }
   }
 }
 
-export { SystemInfo, SshConfig, EncryptResult, DecryptResult }
+export { SystemInfo, SshConfig, EncryptResult, DecryptResult, StorageResult, SshHost }

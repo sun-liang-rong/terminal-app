@@ -1,5 +1,75 @@
 <template>
-  <div ref="terminalRef" class="terminal"></div>
+  <div class="terminal-container">
+    <div ref="terminalRef" class="terminal"></div>
+
+    <!-- 空态引导层 -->
+    <Transition name="guide-fade">
+      <div v-if="showGuide" class="terminal-guide" @click="hideGuide">
+        <div class="guide-content">
+          <div class="guide-logo">
+            <div class="logo-icon">
+              <div class="logo-shine"></div>
+            </div>
+          </div>
+          <h2 class="guide-title">欢迎使用神经终端</h2>
+          <p class="guide-subtitle">高效、智能的现代化终端体验</p>
+
+          <div class="guide-divider"></div>
+
+          <div class="guide-actions">
+            <div class="action-item">
+              <div class="action-icon">
+                <i class="iconfont icon-terminal"></i>
+              </div>
+              <div class="action-info">
+                <span class="action-title">输入命令</span>
+                <span class="action-desc">直接输入命令开始使用</span>
+              </div>
+            </div>
+            <div class="action-item">
+              <div class="action-icon ai">
+                <i class="iconfont icon-ai"></i>
+              </div>
+              <div class="action-info">
+                <span class="action-title">AI 助手</span>
+                <span class="action-desc">切换到助手面板获取智能帮助</span>
+              </div>
+            </div>
+            <div class="action-item">
+              <div class="action-icon">
+                <div class="key-badge">⌘K</div>
+              </div>
+              <div class="action-info">
+                <span class="action-title">命令面板</span>
+                <span class="action-desc">快速搜索进程、命令、主机</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="guide-shortcuts">
+            <div class="shortcut">
+              <kbd>Ctrl</kbd>+<kbd>T</kbd>
+              <span>新建会话</span>
+            </div>
+            <div class="shortcut">
+              <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>
+              <span>复制</span>
+            </div>
+            <div class="shortcut">
+              <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd>
+              <span>粘贴</span>
+            </div>
+            <div class="shortcut">
+              <kbd>Ctrl</kbd>+<kbd>1-9</kbd>
+              <span>切换会话</span>
+            </div>
+          </div>
+
+          <p class="guide-hint">点击任意位置或输入命令开始</p>
+        </div>
+      </div>
+    </Transition>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -8,6 +78,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { initSettings, getSettings, getCurrentTheme } from '../utils/settingsStore'
+import { updateStatus } from '../utils/terminalStatus'
 // @ts-ignore - CSS import
 import '@xterm/xterm/css/xterm.css'
 
@@ -22,7 +93,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['title-change', 'new-session', 'close-session', 'switch-session'])
+const emit = defineEmits(['title-change', 'new-session', 'close-session', 'switch-session', 'shell-change'])
 
 const terminalRef = ref<HTMLDivElement | null>(null)
 let terminal: Terminal | null = null
@@ -34,14 +105,47 @@ let ptyExitListenerId: number | null = null
 let themeChangeListener: ((e: Event) => void) | null = null
 let settingsChangeListener: ((e: Event) => void) | null = null
 
-// 获取 electron API (通过 preload 暴露) - 每次访问都从 window 获取
-const getElectronAPI = () => window.electronAPI
+// PTY 状态跟踪
+let ptyReady = false
+let simulationMode = false
+let onDataDisposable: { dispose: () => void } | null = null
 
-// 初始化设置
-initSettings()
-const settings = getSettings()
+// 空态引导层
+const showGuide = ref(true)
+const hideGuide = () => {
+  showGuide.value = false
+}
+
+// 获取 electron API (通过 preload 暴露) - 每次访问都从 window 获取
+const getElectronAPI = () => {
+  const api = window.electronAPI
+  if (!api) {
+    console.error('[Terminal] electronAPI not found on window!')
+    console.log('[Terminal] window keys:', Object.keys(window))
+  }
+  return api
+}
+
+// 检测 shell 名称
+const getShellName = (): string => {
+  // Windows 默认使用 PowerShell
+  if (navigator.platform.toLowerCase().includes('win')) {
+    return 'PowerShell'
+  }
+  // 其他系统根据环境变量判断
+  return 'bash'
+}
+
+const shellName = getShellName()
+
+// 设置变量（在 onMounted 中初始化）
+let settings = getSettings()
 
 onMounted(async () => {
+  // 初始化设置
+  await initSettings()
+  settings = getSettings()
+
   terminalId.value = `session-${props.sessionId}`
   const element = terminalRef.value
   if (!element) return
@@ -80,7 +184,10 @@ onMounted(async () => {
   themeChangeListener = () => {
     if (terminal) {
       const newTheme = getCurrentTheme()
+      // 强制更新主题
       terminal.options.theme = newTheme
+      // 刷新终端显示
+      terminal.refresh(0, terminal.rows - 1)
     }
   }
   window.addEventListener('theme-change', themeChangeListener as EventListener)
@@ -107,6 +214,7 @@ onMounted(async () => {
         break
       case 'theme':
         terminal.options.theme = getCurrentTheme()
+        terminal.refresh(0, terminal.rows - 1)
         break
     }
 
@@ -120,17 +228,42 @@ onMounted(async () => {
   // 显示欢迎横幅
   await showWelcomeBanner()
 
+  // 欢迎横幅显示后，延迟隐藏引导层（给用户时间看到引导信息）
+  setTimeout(() => {
+    hideGuide()
+  }, 3000)
+
   const term = terminal
   const fit = fitAddon
   const tid = terminalId.value
+
+  // 监听 PTY 输出 (在 PTY 创建前注册监听器)
+  const electronAPI = getElectronAPI()
+  if (electronAPI) {
+    ptyDataListenerId = electronAPI.onPtyData(({ id, data }) => {
+      if (id === terminalId.value && terminal) {
+        terminal.write(data)
+        // 隐藏引导层
+        hideGuide()
+      }
+    })
+
+    ptyExitListenerId = electronAPI.onPtyExit(({ id, exitCode }) => {
+      if (id === terminalId.value && terminal) {
+        terminal.writeln(`\r\n\x1b[31m进程已退出，退出码: ${exitCode}\x1b[0m`)
+        emit('title-change', `已退出 (${exitCode})`)
+        ptyReady = false
+      }
+    })
+  }
 
   // 获取实际尺寸后自适应并创建 PTY
   setTimeout(async () => {
     if (!props.active || !term || !fit) return
 
     // 检查 electronAPI 是否可用
-    const electronAPI = getElectronAPI()
-    if (!electronAPI) {
+    const api = getElectronAPI()
+    if (!api) {
       term.writeln('\r\n\x1b[33mElectron API 未加载，切换到模拟模式.\x1b[0m\r\n')
       initSimulationMode()
       return
@@ -141,10 +274,33 @@ onMounted(async () => {
 
     // 创建真实 PTY 进程
     try {
-      const result = await electronAPI.ptyCreate({ id: tid, cols, rows })
+      const result = await api.ptyCreate({ id: tid, cols, rows })
       if (result.success) {
         console.log('PTY created, PID:', result.pid)
         emit('title-change', `Shell — ${result.pid}`)
+        emit('shell-change', shellName)
+        ptyReady = true
+
+        // PTY 创建成功后，绑定 onData 监听器
+        if (terminal) {
+          onDataDisposable = terminal.onData((data) => {
+            // 隐藏引导层
+            hideGuide()
+            // 只有在 PTY 就绪时才发送数据
+            if (ptyReady) {
+              api.ptyWrite({ id: terminalId.value, data })
+            }
+          })
+          // 更新状态
+          updateStatus({
+            connected: true,
+            shell: shellName,
+            activeSessionType: 'local',
+            cols: terminal.cols,
+            rows: terminal.rows,
+            encoding: 'UTF-8'
+          })
+        }
       } else {
         term.writeln(`\r\n\x1b[31m无法创建 Shell: ${result.error}\x1b[0m`)
         term.writeln('\x1b[33m切换到模拟模式.\x1b[0m\r\n')
@@ -157,28 +313,6 @@ onMounted(async () => {
       initSimulationMode()
     }
   }, 800)
-
-  // 监听 PTY 输出 (仅在 electronAPI 可用时)
-  const electronAPI = getElectronAPI()
-  if (electronAPI) {
-    ptyDataListenerId = electronAPI.onPtyData(({ id, data }) => {
-      if (id === terminalId.value && terminal) {
-        terminal.write(data)
-      }
-    })
-
-    ptyExitListenerId = electronAPI.onPtyExit(({ id, exitCode }) => {
-      if (id === terminalId.value && terminal) {
-        terminal.writeln(`\r\n\x1b[31m进程已退出，退出码: ${exitCode}\x1b[0m`)
-        emit('title-change', `已退出 (${exitCode})`)
-      }
-    })
-
-    // 用户输入转发到 PTY
-    terminal.onData((data) => {
-      electronAPI.ptyWrite({ id: terminalId.value, data })
-    })
-  }
 
   // 复制功能：选择文本后自动复制，或 Ctrl+Shift+C 复制
   terminal.onSelectionChange(() => {
@@ -209,12 +343,14 @@ onMounted(async () => {
         }
         return false
       }
-      // Ctrl+Shift+V 粘贴
+      // Ctrl+Shift+V 粘贴 - 使用 xterm 的 paste 方法，避免重复发送
       if (event.key === 'V' || event.key === 'v') {
-        if (electronAPI) {
+        if (electronAPI && terminal) {
           const text = electronAPI.clipboardRead()
           if (text) {
-            electronAPI.ptyWrite({ id: terminalId.value, data: text })
+            // 使用 terminal.paste() 而不是 ptyWrite
+            // 这样 xterm 会通过 onData 正确处理，避免重复
+            terminal.paste(text)
           }
         }
         return false
@@ -249,6 +385,14 @@ onMounted(async () => {
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.ptyResize({ id: terminalId.value, cols, rows })
+      updateStatus({
+        connected: ptyReady,
+        shell: shellName,
+        activeSessionType: 'local',
+        cols,
+        rows,
+        encoding: 'UTF-8'
+      })
     }
   }
   window.addEventListener('resize', resizeHandler)
@@ -259,21 +403,50 @@ watch(() => props.active, async (active, wasActive) => {
   const electronAPI = getElectronAPI()
   if (active && terminal && fitAddon) {
     setTimeout(() => {
-      const electronAPI = getElectronAPI()
-      if (!terminal || !fitAddon || !electronAPI) return
+      const api = getElectronAPI()
+      if (!terminal || !fitAddon || !api || !ptyReady) return
       fitAddon.fit()
       const { cols, rows } = terminal
-      electronAPI.ptyResize({ id: terminalId.value, cols, rows })
+      api.ptyResize({ id: terminalId.value, cols, rows })
+      // 更新状态栏
+      updateStatus({
+        connected: ptyReady,
+        shell: shellName,
+        activeSessionType: 'local',
+        cols,
+        rows,
+        encoding: 'UTF-8'
+      })
     }, 50)
 
-    // 如果之前没有活跃过，需要创建 PTY
-    if (!wasActive && electronAPI) {
+    // 如果之前没有活跃过且 PTY 未创建，需要创建 PTY
+    if (!wasActive && electronAPI && !ptyReady && !simulationMode) {
       if (!terminal) return
+      fitAddon.fit()
       const { cols, rows } = terminal
       try {
         const result = await electronAPI.ptyCreate({ id: terminalId.value, cols, rows })
         if (result.success) {
           emit('title-change', `Shell — ${result.pid}`)
+          ptyReady = true
+
+          // PTY 创建成功后，绑定 onData 监听器
+          if (terminal) {
+            onDataDisposable = terminal.onData((data) => {
+              if (ptyReady) {
+                electronAPI.ptyWrite({ id: terminalId.value, data })
+              }
+            })
+            // 更新状态栏
+            updateStatus({
+              connected: true,
+              shell: shellName,
+              activeSessionType: 'local',
+              cols: terminal.cols,
+              rows: terminal.rows,
+              encoding: 'UTF-8'
+            })
+          }
         } else {
           initSimulationMode()
         }
@@ -298,6 +471,12 @@ onUnmounted(() => {
   // 移除设置监听器
   if (settingsChangeListener) {
     window.removeEventListener('settings-change', settingsChangeListener as EventListener)
+  }
+
+  // 清理 onData 监听器
+  if (onDataDisposable) {
+    onDataDisposable.dispose()
+    onDataDisposable = null
   }
 
   // 移除 PTY 监听器
@@ -394,6 +573,10 @@ async function showWelcomeBanner() {
 function initSimulationMode() {
   if (!terminal) return
 
+  // 设置模拟模式标志
+  simulationMode = true
+  ptyReady = false
+
   let commandBuffer = ''
   const prompt = '\x1b[36m➜ \x1b[34m神经终端\x1b[0m \x1b[33m~\x1b[0m $ '
 
@@ -406,8 +589,11 @@ function initSimulationMode() {
 
   emit('title-change', '模拟模式')
 
+  // 绑定模拟模式的 onData（终端实例会自动处理多个监听器）
   terminal.onData((data) => {
-    if (!terminal) return
+    if (!terminal || !simulationMode) return
+    // 隐藏引导层
+    hideGuide()
     const code = data.charCodeAt(0)
 
     if (code === 13) { // Enter
@@ -474,13 +660,300 @@ function processSimulatedCommand(cmd: string) {
 </script>
 
 <style scoped>
+.terminal-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
 .terminal {
   width: 100%;
   height: 100%;
-  background: #0f0f14;
+  background: var(--color-bg-base, #0f0f14);
   padding: 0;
   margin: 0;
   overflow: hidden;
+}
+
+/* 空态引导层 */
+.terminal-guide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 15, 0.92);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  cursor: pointer;
+}
+
+.guide-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 420px;
+  padding: 40px;
+  text-align: center;
+}
+
+/* Logo - 入场动画 */
+.guide-logo {
+  margin-bottom: 20px;
+  animation: logo-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+}
+
+@keyframes logo-enter {
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.guide-logo .logo-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 50%, #8b5cf6 100%);
+  border-radius: 14px;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.25);
+  overflow: hidden;
+}
+
+.guide-logo .logo-shine {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: rotate(45deg);
+  animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0%, 100% { transform: translateX(-50%) rotate(45deg); }
+  50% { transform: translateX(50%) rotate(45deg); }
+}
+
+.guide-logo .logo-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
+  border-radius: 5px;
+}
+
+/* 标题 - 交错入场 */
+.guide-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary, #f5f5f7);
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+  animation: text-enter 0.5s ease 0.1s forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.guide-subtitle {
+  font-size: 13px;
+  color: var(--color-text-tertiary, #6b6b78);
+  margin-bottom: 24px;
+  animation: text-enter 0.5s ease 0.15s forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes text-enter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 分隔线 */
+.guide-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-border-default, rgba(255, 255, 255, 0.08)), transparent);
+  margin-bottom: 24px;
+  animation: divider-enter 0.5s ease 0.2s forwards;
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+@keyframes divider-enter {
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* 操作项 - 交错入场 */
+.guide-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  text-align: left;
+  animation: action-enter 0.4s ease forwards;
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.action-item:nth-child(1) { animation-delay: 0.25s; }
+.action-item:nth-child(2) { animation-delay: 0.3s; }
+.action-item:nth-child(3) { animation-delay: 0.35s; }
+
+@keyframes action-enter {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.action-item:hover {
+  background: rgba(0, 240, 255, 0.05);
+  border-color: rgba(0, 240, 255, 0.12);
+  transform: translateX(4px);
+}
+
+.action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 240, 255, 0.08);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.action-icon i {
+  font-size: 16px;
+  color: var(--color-brand-primary, #00f0ff);
+}
+
+.action-icon.ai {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.action-icon.ai i {
+  color: var(--color-brand-accent, #8b5cf6);
+}
+
+.action-icon .key-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-brand-primary, #00f0ff);
+  letter-spacing: 0.3px;
+}
+
+.action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.action-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, #e5e5e7);
+}
+
+.action-desc {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #6b6b78);
+}
+
+/* 快捷键 - 入场动画 */
+.guide-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  animation: shortcuts-enter 0.5s ease 0.4s forwards;
+  opacity: 0;
+}
+
+@keyframes shortcuts-enter {
+  to {
+    opacity: 1;
+  }
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--color-text-tertiary, #6b6b78);
+}
+
+.shortcut kbd {
+  padding: 2px 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  font-size: 9px;
+  font-family: inherit;
+  color: var(--color-text-secondary, #9b9ba5);
+}
+
+/* 提示 */
+.guide-hint {
+  font-size: 11px;
+  color: var(--color-text-disabled, #5a5a68);
+  animation: hint-enter 0.5s ease 0.5s forwards;
+  opacity: 0;
+}
+
+@keyframes hint-enter {
+  to {
+    opacity: 1;
+  }
+}
+
+/* 引导层动画 */
+.guide-fade-enter-active {
+  transition: all 0.3s ease;
+}
+
+.guide-fade-leave-active {
+  transition: all 0.25s ease;
+}
+
+.guide-fade-enter-from,
+.guide-fade-leave-to {
+  opacity: 0;
+}
+
+.guide-fade-leave-to {
+  backdrop-filter: blur(0px);
 }
 
 /* 确保终端内容从左上角开始 */
@@ -512,21 +985,27 @@ function processSimulatedCommand(cmd: string) {
   margin: 0 !important;
 }
 
-/* 自定义滚动条样式 */
+/* 自定义滚动条样式 - 使用 CSS 变量 */
 .terminal :deep(.xterm-viewport::-webkit-scrollbar) {
-  width: 8px;
+  width: 6px;
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-track) {
-  background: #0f0f14;
+  background: transparent;
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: #23232c;
-  border-radius: 4px;
+  background: var(--color-border-default, rgba(255, 255, 255, 0.08));
+  border-radius: 3px;
+  transition: background 0.2s ease;
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
-  background: #00f0ff;
+  background: var(--color-brand-primary, #00f0ff);
+}
+
+/* 滚动条角落 */
+.terminal :deep(.xterm-viewport::-webkit-scrollbar-corner) {
+  background: transparent;
 }
 </style>

@@ -8,6 +8,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { initSettings, getSettings, getCurrentTheme } from '../utils/settingsStore'
+import { updateStatus } from '../utils/terminalStatus'
 // @ts-ignore - CSS import
 import '@xterm/xterm/css/xterm.css'
 
@@ -43,11 +44,14 @@ let settingsChangeListener: ((e: Event) => void) | null = null
 
 const electronAPI = window.electronAPI
 
-// 初始化设置
-initSettings()
-const settings = getSettings()
+// 设置变量（在 onMounted 中初始化）
+let settings = getSettings()
 
 onMounted(async () => {
+  // 初始化设置
+  await initSettings()
+  settings = getSettings()
+
   const element = terminalRef.value
   if (!element) return
 
@@ -81,10 +85,12 @@ onMounted(async () => {
   terminal.open(element)
 
   // 监听主题变化
-  themeChangeListener = (e: Event) => {
+  themeChangeListener = () => {
     if (terminal) {
       const newTheme = getCurrentTheme()
       terminal.options.theme = newTheme
+      // 刷新终端显示
+      terminal.refresh(0, terminal.rows - 1)
     }
   }
   window.addEventListener('theme-change', themeChangeListener as EventListener)
@@ -111,6 +117,7 @@ onMounted(async () => {
         break
       case 'theme':
         terminal.options.theme = getCurrentTheme()
+        terminal.refresh(0, terminal.rows - 1)
         break
     }
 
@@ -124,6 +131,16 @@ onMounted(async () => {
   // 连接已经建立，显示提示
   terminal.writeln(`\x1b[32m✓ 已连接到 ${props.host}\x1b[0m`)
   terminal.writeln('')
+
+  // 更新状态：SSH 已连接
+  updateStatus({
+    connected: true,
+    shell: 'ssh',
+    activeSessionType: 'ssh',
+    cols: terminal.cols,
+    rows: terminal.rows,
+    encoding: 'UTF-8'
+  })
 
   // 监听 SSH 数据 (仅在 electronAPI 可用时)
   if (electronAPI) {
@@ -140,6 +157,12 @@ onMounted(async () => {
         terminal.writeln('\x1b[31m连接已关闭\x1b[0m')
         emit('title-change', '已断开')
         emit('disconnected')
+        // 更新状态：SSH 已断开
+        updateStatus({
+          connected: false,
+          shell: 'ssh',
+          activeSessionType: 'ssh'
+        })
       }
     })
 
@@ -176,12 +199,14 @@ onMounted(async () => {
         }
         return false
       }
-      // Ctrl+Shift+V 粘贴
+      // Ctrl+Shift+V 粘贴 - 使用 xterm 的 paste 方法，避免重复发送
       if (event.key === 'V' || event.key === 'v') {
-        if (electronAPI) {
+        if (electronAPI && terminal) {
           const text = electronAPI.clipboardRead()
           if (text) {
-            electronAPI.sshWrite({ id: props.sshId, data: text })
+            // 使用 terminal.paste() 而不是 sshWrite
+            // 这样 xterm 会通过 onData 正确处理，避免重复
+            terminal.paste(text)
           }
         }
         return false
@@ -196,6 +221,14 @@ onMounted(async () => {
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.sshResize({ id: props.sshId, cols, rows })
+      updateStatus({
+        connected: true,
+        shell: 'ssh',
+        activeSessionType: 'ssh',
+        cols,
+        rows,
+        encoding: 'UTF-8'
+      })
     }
   }
   window.addEventListener('resize', resizeHandler)
@@ -206,6 +239,14 @@ onMounted(async () => {
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.sshResize({ id: props.sshId, cols, rows })
+      updateStatus({
+        connected: true,
+        shell: 'ssh',
+        activeSessionType: 'ssh',
+        cols,
+        rows,
+        encoding: 'UTF-8'
+      })
     }
   }, 100)
 })
@@ -218,6 +259,14 @@ watch(() => props.active, (active) => {
       fitAddon.fit()
       const { cols, rows } = terminal
       electronAPI.sshResize({ id: props.sshId, cols, rows })
+      updateStatus({
+        connected: true,
+        shell: 'ssh',
+        activeSessionType: 'ssh',
+        cols,
+        rows,
+        encoding: 'UTF-8'
+      })
     }, 50)
   }
 })
@@ -294,7 +343,7 @@ onUnmounted(() => {
 .terminal {
   width: 100%;
   height: 100%;
-  background: #0f0f14;
+  background: var(--color-bg-base, #0f0f14);
   padding: 0;
   margin: 0;
   overflow: hidden;
@@ -314,25 +363,29 @@ onUnmounted(() => {
 .terminal :deep(.xterm-viewport) {
   padding: 0 !important;
   margin: 0 !important;
-  /* 确保滚动条可用 */
   overflow-y: auto !important;
 }
 
-/* 自定义滚动条样式 */
+/* 自定义滚动条样式 - 使用 CSS 变量 */
 .terminal :deep(.xterm-viewport::-webkit-scrollbar) {
-  width: 8px;
+  width: 6px;
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-track) {
-  background: #0d1117;
+  background: transparent;
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: #30363d;
-  border-radius: 4px;
+  background: var(--color-border-default, rgba(255, 255, 255, 0.08));
+  border-radius: 3px;
+  transition: background 0.2s ease;
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
-  background: #58a6ff;
+  background: var(--color-brand-primary, #00f0ff);
+}
+
+.terminal :deep(.xterm-viewport::-webkit-scrollbar-corner) {
+  background: transparent;
 }
 </style>

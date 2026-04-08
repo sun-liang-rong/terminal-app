@@ -1,46 +1,98 @@
 <template>
-  <div class="ssh-panel">
-    <!-- 连接中 Loading 遮罩 -->
-    <div class="connecting-overlay" v-if="connecting">
-      <div class="connecting-content">
-        <div class="connecting-spinner">
-          <div class="spinner-ring"></div>
-          <div class="spinner-ring"></div>
-          <div class="spinner-ring"></div>
+  <div class="ssh-panel" role="region" aria-label="SSH 主机管理">
+    <!-- 连接中 Loading 遮罩 - Skeleton 风格 -->
+    <Transition name="fade">
+      <div
+        class="connecting-overlay"
+        v-if="connecting"
+        role="alert"
+        aria-live="polite"
+        aria-busy="true"
+        aria-label="正在连接主机"
+      >
+        <div class="connecting-content">
+          <!-- Skeleton 终端预览 -->
+          <div class="skeleton-terminal" aria-hidden="true">
+            <div class="skeleton-header">
+              <div class="skeleton-dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+              </div>
+              <div class="skeleton-title">{{ connectingHost?.host || 'server' }}</div>
+            </div>
+            <div class="skeleton-body">
+              <div class="skeleton-line" style="width: 60%"></div>
+              <div class="skeleton-line" style="width: 80%"></div>
+              <div class="skeleton-line" style="width: 45%"></div>
+              <div class="skeleton-line highlight" style="width: 70%"></div>
+              <div class="skeleton-line" style="width: 55%"></div>
+            </div>
+          </div>
+
+          <!-- 连接状态 -->
+          <div class="connecting-status">
+            <div class="status-indicator" aria-hidden="true">
+              <span class="pulse-ring"></span>
+              <span class="pulse-ring delay"></span>
+              <span class="status-dot"></span>
+            </div>
+            <div class="status-text">
+              <span class="status-title">正在连接</span>
+              <span class="status-host">{{ connectingHost?.name || connectingHost?.host }}</span>
+              <span class="status-info">{{ connectingHost?.username }}@{{ connectingHost?.host }}:{{ connectingHost?.port || 22 }}</span>
+            </div>
+          </div>
         </div>
-        <div class="connecting-title">正在连接</div>
-        <div class="connecting-host">{{ connectingHost?.name || connectingHost?.host }}</div>
-        <div class="connecting-info">{{ connectingHost?.username }}@{{ connectingHost?.host }}:{{ connectingHost?.port || 22 }}</div>
       </div>
-    </div>
+    </Transition>
 
     <!-- 顶部工具栏 -->
-    <div class="ssh-toolbar">
+    <div class="ssh-toolbar" role="toolbar" aria-label="主机管理工具栏">
       <div class="toolbar-left">
-        <button class="toolbar-btn primary" @click="showNewHostModal = true">
-          <i class="iconfont icon-add"></i>
+        <button
+          class="toolbar-btn primary"
+          @click="showNewHostModal = true"
+          aria-label="新建主机"
+        >
+          <i class="iconfont icon-add" aria-hidden="true"></i>
           <span>NEW HOST</span>
         </button>
       </div>
       <div class="toolbar-right">
-        <div class="search-box">
-          <i class="iconfont icon-search"></i>
-          <input type="text" placeholder="搜索主机..." v-model="searchQuery" />
+        <div class="search-box" role="search">
+          <i class="iconfont icon-search" aria-hidden="true"></i>
+          <input
+            type="text"
+            placeholder="搜索主机..."
+            v-model="searchQuery"
+            aria-label="搜索主机"
+            @input="onSearchInput"
+          />
         </div>
       </div>
     </div>
 
     <!-- 主机列表 -->
     <div class="hosts-section">
-      <h2 class="section-title">Hosts</h2>
-      <div class="hosts-grid">
-        <div
-          v-for="host in filteredHosts"
+      <h2 class="section-title" id="hosts-heading">Hosts</h2>
+      <div
+        class="hosts-grid"
+        role="list"
+        aria-labelledby="hosts-heading"
+        @keydown="handleHostsKeydown"
+      >
+        <button
+          v-for="(host, index) in filteredHosts"
           :key="host.id"
           class="host-card"
+          role="listitem"
+          :aria-label="`${host.name || host.host}, ${host.protocol}, 用户 ${host.username}`"
+          :tabindex="index === 0 ? 0 : -1"
           @click="connectToHost(host)"
+          @keydown="handleHostKeydown($event, index)"
         >
-          <div class="host-icon">
+          <div class="host-icon" aria-hidden="true">
             <i class="iconfont icon-linux"></i>
           </div>
           <div class="host-info">
@@ -48,36 +100,66 @@
             <div class="host-detail">{{ host.protocol }}, {{ host.username }}</div>
           </div>
           <div class="host-actions" @click.stop>
-            <button class="action-btn" @click="editHost(host)" title="编辑">
-              <i class="iconfont icon-edit"></i>
+            <button
+              class="action-btn"
+              @click="editHost(host)"
+              :aria-label="`编辑 ${host.name || host.host}`"
+              title="编辑"
+            >
+              <i class="iconfont icon-edit" aria-hidden="true"></i>
             </button>
-            <button class="action-btn" @click="deleteHost(host.id)" title="删除">
-              <i class="iconfont icon-delete"></i>
+            <button
+              class="action-btn"
+              :class="{ danger: deleteConfirmId === host.id }"
+              @click="deleteHost(host.id)"
+              :aria-label="deleteConfirmId === host.id ? `确认删除 ${host.name || host.host}` : `删除 ${host.name || host.host}`"
+              :title="deleteConfirmId === host.id ? '再次点击确认删除' : '删除'"
+            >
+              <i class="iconfont icon-delete" aria-hidden="true"></i>
             </button>
           </div>
-        </div>
+        </button>
 
         <!-- 添加新主机卡片 -->
-        <div class="host-card add-card" @click="showNewHostModal = true">
-          <div class="add-icon">
+        <button
+          class="host-card add-card"
+          @click="showNewHostModal = true"
+          aria-label="添加新主机"
+          :tabindex="filteredHosts.length === 0 ? 0 : -1"
+        >
+          <div class="add-icon" aria-hidden="true">
             <i class="iconfont icon-add"></i>
           </div>
           <div class="add-text">添加新主机</div>
-        </div>
+        </button>
       </div>
     </div>
 
     <!-- 新建/编辑主机模态框 -->
-    <div class="modal-overlay" v-if="showNewHostModal" @click.self="closeModal">
+    <div
+      class="modal-overlay"
+      v-if="showNewHostModal"
+      @click.self="closeModal"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="editingHost ? 'modal-title-edit' : 'modal-title-new'"
+    >
       <div class="modal-container">
         <div class="modal-header">
-          <h3>{{ editingHost ? '编辑主机' : '新建主机' }}</h3>
-          <button class="close-btn" @click="closeModal">
-            <i class="iconfont icon-close"></i>
+          <h3 :id="editingHost ? 'modal-title-edit' : 'modal-title-new'">
+            {{ editingHost ? '编辑主机' : '新建主机' }}
+          </h3>
+          <button
+            class="close-btn"
+            @click="closeModal"
+            aria-label="关闭"
+          >
+            <i class="iconfont icon-close" aria-hidden="true"></i>
           </button>
         </div>
         <div class="modal-body">
-          <form @submit.prevent="saveHost">
+          <form @submit.prevent="saveHost" aria-label="主机配置表单">
+            <!-- 主机名称 -->
             <div class="form-group">
               <label>主机名称</label>
               <input
@@ -86,41 +168,84 @@
                 placeholder="例如: 生产服务器"
               />
             </div>
+
+            <!-- 主机地址 + 端口 -->
             <div class="form-row">
-              <div class="form-group">
-                <label>主机地址 *</label>
+              <div class="form-group" :class="{ 'has-error': errors.host }">
+                <label for="host-address">主机地址 <span class="required">*</span></label>
                 <input
+                  id="host-address"
                   type="text"
                   v-model="hostForm.host"
                   placeholder="IP 或域名"
                   required
+                  aria-required="true"
+                  :aria-invalid="!!errors.host"
+                  :aria-describedby="errors.host ? 'host-error' : undefined"
+                  @blur="validateField('host')"
+                  @input="clearError('host')"
                 />
+                <Transition name="error-slide">
+                  <span class="error-message" v-if="errors.host" id="host-error" role="alert">
+                    <i class="iconfont icon-warning" aria-hidden="true"></i>
+                    {{ errors.host }}
+                  </span>
+                </Transition>
               </div>
-              <div class="form-group small">
-                <label>端口</label>
+              <div class="form-group small" :class="{ 'has-error': errors.port }">
+                <label for="host-port">端口</label>
                 <input
+                  id="host-port"
                   type="number"
                   v-model="hostForm.port"
                   placeholder="22"
+                  :aria-invalid="!!errors.port"
+                  :aria-describedby="errors.port ? 'port-error' : undefined"
+                  @blur="validateField('port')"
+                  @input="clearError('port')"
                 />
+                <Transition name="error-slide">
+                  <span class="error-message" v-if="errors.port" id="port-error" role="alert">
+                    <i class="iconfont icon-warning" aria-hidden="true"></i>
+                    {{ errors.port }}
+                  </span>
+                </Transition>
               </div>
             </div>
-            <div class="form-group">
-              <label>用户名 *</label>
+
+            <!-- 用户名 -->
+            <div class="form-group" :class="{ 'has-error': errors.username }">
+              <label for="host-username">用户名 <span class="required">*</span></label>
               <input
+                id="host-username"
                 type="text"
                 v-model="hostForm.username"
                 placeholder="root"
                 required
+                aria-required="true"
+                :aria-invalid="!!errors.username"
+                :aria-describedby="errors.username ? 'username-error' : undefined"
+                @blur="validateField('username')"
+                @input="clearError('username')"
               />
+              <Transition name="error-slide">
+                <span class="error-message" v-if="errors.username" id="username-error" role="alert">
+                  <i class="iconfont icon-warning" aria-hidden="true"></i>
+                  {{ errors.username }}
+                </span>
+              </Transition>
             </div>
+
+            <!-- 认证方式 -->
             <div class="form-group">
-              <label>认证方式</label>
-              <div class="auth-tabs">
+              <span id="auth-label">认证方式</span>
+              <div class="auth-tabs" role="radiogroup" aria-labelledby="auth-label">
                 <button
                   type="button"
                   class="auth-tab"
                   :class="{ active: hostForm.authType === 'password' }"
+                  role="radio"
+                  :aria-checked="hostForm.authType === 'password'"
                   @click="hostForm.authType = 'password'"
                 >
                   密码
@@ -129,37 +254,73 @@
                   type="button"
                   class="auth-tab"
                   :class="{ active: hostForm.authType === 'key' }"
+                  role="radio"
+                  :aria-checked="hostForm.authType === 'key'"
                   @click="hostForm.authType = 'key'"
                 >
                   私钥
                 </button>
               </div>
             </div>
-            <div class="form-group" v-if="hostForm.authType === 'password'">
-              <label>密码</label>
-              <input
-                type="password"
-                v-model="hostForm.password"
-                placeholder="输入密码"
-              />
+
+            <!-- 密码 -->
+            <div class="form-group" v-if="hostForm.authType === 'password'" :class="{ 'has-error': errors.password }">
+              <label>密码 <span class="required" v-if="!editingHost">*</span></label>
+              <div class="password-input">
+                <input
+                  :type="showPassword ? 'text' : 'password'"
+                  v-model="hostForm.password"
+                  placeholder="输入密码"
+                  @blur="validateField('password')"
+                  @input="clearError('password')"
+                />
+                <button type="button" class="toggle-password" @click="showPassword = !showPassword">
+                  <i class="iconfont" :class="showPassword ? 'icon-close' : 'icon-search'"></i>
+                </button>
+              </div>
+              <Transition name="error-slide">
+                <span class="error-message" v-if="errors.password">
+                  <i class="iconfont icon-warning"></i>
+                  {{ errors.password }}
+                </span>
+              </Transition>
+              <!-- 密码强度指示器 -->
+              <div class="password-strength" v-if="hostForm.password && !editingHost">
+                <div class="strength-bar">
+                  <div class="strength-fill" :class="passwordStrength.level" :style="{ width: passwordStrength.percent + '%' }"></div>
+                </div>
+                <span class="strength-text" :class="passwordStrength.level">{{ passwordStrength.text }}</span>
+              </div>
             </div>
-            <div class="form-group" v-if="hostForm.authType === 'key'">
-              <label>私钥路径</label>
+
+            <!-- 私钥 -->
+            <div class="form-group" v-if="hostForm.authType === 'key'" :class="{ 'has-error': errors.privateKey }">
+              <label>私钥路径 <span class="required">*</span></label>
               <div class="file-input">
                 <input
                   type="text"
                   v-model="hostForm.privateKey"
                   placeholder="选择私钥文件"
                   readonly
+                  @blur="validateField('privateKey')"
                 />
                 <button type="button" class="file-btn" @click="selectKeyFile">
                   浏览
                 </button>
               </div>
+              <Transition name="error-slide">
+                <span class="error-message" v-if="errors.privateKey">
+                  <i class="iconfont icon-warning"></i>
+                  {{ errors.privateKey }}
+                </span>
+              </Transition>
             </div>
+
+            <!-- 保存密码 -->
             <div class="form-group">
               <label class="checkbox-label">
                 <input type="checkbox" v-model="hostForm.savePassword" />
+                <span class="checkbox-custom"></span>
                 <span>保存密码（本地加密存储）</span>
               </label>
             </div>
@@ -167,32 +328,18 @@
         </div>
         <div class="modal-footer">
           <button class="btn secondary" @click="closeModal">取消</button>
-          <button class="btn primary" @click="saveHost" :disabled="!isFormValid">
+          <button class="btn primary" @click="saveHost" :disabled="!isFormValid || hasErrors">
             {{ editingHost ? '保存' : '添加' }}
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- 连接状态提示 -->
-    <div class="toast-container">
-      <transition-group name="toast">
-        <div
-          v-for="toast in toasts"
-          :key="toast.id"
-          class="toast"
-          :class="toast.type"
-        >
-          <i class="iconfont" :class="toast.icon"></i>
-          <span>{{ toast.message }}</span>
-        </div>
-      </transition-group>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { toast } from '../utils/notification'
 
 const emit = defineEmits(['connect'])
 
@@ -200,6 +347,7 @@ const emit = defineEmits(['connect'])
 const searchQuery = ref('')
 const showNewHostModal = ref(false)
 const editingHost = ref(null)
+const showPassword = ref(false)
 
 // 主机列表
 const hosts = ref([])
@@ -217,8 +365,85 @@ const hostForm = ref({
   protocol: 'ssh'
 })
 
-// Toast 提示
-const toasts = ref([])
+// 表单验证错误
+const errors = ref({
+  host: '',
+  port: '',
+  username: '',
+  password: '',
+  privateKey: ''
+})
+
+// 验证规则
+const validateField = (field) => {
+  switch (field) {
+    case 'host':
+      if (!hostForm.value.host.trim()) {
+        errors.value.host = '请输入主机地址'
+      } else if (!/^[\w.-]+$/.test(hostForm.value.host)) {
+        errors.value.host = '主机地址格式不正确'
+      } else {
+        errors.value.host = ''
+      }
+      break
+    case 'port':
+      const port = parseInt(hostForm.value.port)
+      if (hostForm.value.port && (isNaN(port) || port < 1 || port > 65535)) {
+        errors.value.port = '端口范围: 1-65535'
+      } else {
+        errors.value.port = ''
+      }
+      break
+    case 'username':
+      if (!hostForm.value.username.trim()) {
+        errors.value.username = '请输入用户名'
+      } else if (!/^[\w.-]+$/.test(hostForm.value.username)) {
+        errors.value.username = '用户名格式不正确'
+      } else {
+        errors.value.username = ''
+      }
+      break
+    case 'password':
+      if (!editingHost.value && hostForm.value.authType === 'password' && !hostForm.value.password) {
+        errors.value.password = '请输入密码'
+      } else if (hostForm.value.password && hostForm.value.password.length < 6) {
+        errors.value.password = '密码至少6位'
+      } else {
+        errors.value.password = ''
+      }
+      break
+    case 'privateKey':
+      if (hostForm.value.authType === 'key' && !hostForm.value.privateKey) {
+        errors.value.privateKey = '请选择私钥文件'
+      } else {
+        errors.value.privateKey = ''
+      }
+      break
+  }
+}
+
+// 清除错误
+const clearError = (field) => {
+  errors.value[field] = ''
+}
+
+// 密码强度计算
+const passwordStrength = computed(() => {
+  const pwd = hostForm.value.password
+  if (!pwd) return { level: '', percent: 0, text: '' }
+
+  let score = 0
+  if (pwd.length >= 6) score += 20
+  if (pwd.length >= 10) score += 20
+  if (/[a-z]/.test(pwd)) score += 15
+  if (/[A-Z]/.test(pwd)) score += 15
+  if (/[0-9]/.test(pwd)) score += 15
+  if (/[^a-zA-Z0-9]/.test(pwd)) score += 15
+
+  if (score < 40) return { level: 'weak', percent: score, text: '弱' }
+  if (score < 70) return { level: 'medium', percent: score, text: '中等' }
+  return { level: 'strong', percent: Math.min(score, 100), text: '强' }
+})
 
 // 过滤后的主机列表
 const filteredHosts = computed(() => {
@@ -237,76 +462,185 @@ const isFormValid = computed(() => {
   return hostForm.value.host && hostForm.value.username
 })
 
-// 从本地存储加载主机列表
-const loadHosts = () => {
-  const saved = localStorage.getItem('ssh-hosts')
-  if (saved) {
+const hasErrors = computed(() => {
+  return Object.values(errors.value).some(e => e)
+})
+
+// 键盘导航 - 主机列表
+const handleHostKeydown = (event, index) => {
+  const total = filteredHosts.value.length + 1 // +1 for add button
+  let nextIndex = index
+
+  switch (event.key) {
+    case 'ArrowRight':
+    case 'ArrowDown':
+      nextIndex = (index + 1) % total
+      event.preventDefault()
+      break
+    case 'ArrowLeft':
+    case 'ArrowUp':
+      nextIndex = (index - 1 + total) % total
+      event.preventDefault()
+      break
+    case 'Home':
+      nextIndex = 0
+      event.preventDefault()
+      break
+    case 'End':
+      nextIndex = total - 1
+      event.preventDefault()
+      break
+    case 'Delete':
+      event.preventDefault()
+      deleteHost(filteredHosts.value[index].id)
+      return
+    default:
+      return
+  }
+
+  // 聚焦下一个主机卡片
+  const grid = event.currentTarget.closest('.hosts-grid')
+  if (grid) {
+    const cards = grid.querySelectorAll('.host-card')
+    if (cards[nextIndex]) {
+      cards[nextIndex].focus()
+    }
+  }
+}
+
+// 主机列表容器键盘事件
+const handleHostsKeydown = (event) => {
+  // Tab 键不拦截
+  if (event.key === 'Tab') return
+}
+
+// 搜索结果公告（屏幕阅读器）
+const onSearchInput = () => {
+  // 结果数量变化时，可以在这里添加公告
+}
+
+// 从 Electron 存储加载主机列表
+const loadHosts = async () => {
+  try {
+    const result = await window.electronAPI.getHosts()
+    if (result.success && result.data) {
+      hosts.value = result.data
+    } else if (!result.data || result.data.length === 0) {
+      // 添加示例数据
+      hosts.value = [
+        {
+          id: 1,
+          name: '38.76.197.116',
+          host: '38.76.197.116',
+          port: 22,
+          username: 'root',
+          authType: 'password',
+          password: '',
+          privateKey: '',
+          savePassword: false,
+          protocol: 'ssh'
+        },
+        {
+          id: 2,
+          name: '156.226.28.65',
+          host: '156.226.28.65',
+          port: 22,
+          username: 'root',
+          authType: 'password',
+          password: '',
+          privateKey: '',
+          savePassword: false,
+          protocol: 'ssh'
+        }
+      ]
+      saveHosts()
+    }
+  } catch (e) {
+    console.error('Failed to load hosts:', e)
+    toast.error('加载主机列表失败')
+  }
+}
+
+// 保存主机列表到 Electron 存储
+const saveHosts = async () => {
+  try {
+    // 将响应式对象转换为普通对象，避免 IPC 序列化问题
+    const plainHosts = JSON.parse(JSON.stringify(hosts.value))
+    const result = await window.electronAPI.saveHosts(plainHosts)
+    if (!result.success) {
+      toast.error('保存失败: ' + result.error)
+    }
+  } catch (e) {
+    console.error('Failed to save hosts:', e)
+    toast.error('保存主机列表失败')
+  }
+}
+
+// 删除确认状态
+const deleteConfirmId = ref(null)
+
+// 保存主机（带密码加密）
+const saveHost = async () => {
+  // 验证所有字段
+  validateField('host')
+  validateField('port')
+  validateField('username')
+  if (hostForm.value.authType === 'password') {
+    validateField('password')
+  } else {
+    validateField('privateKey')
+  }
+
+  if (hasErrors.value) {
+    toast.warning('请修正表单错误')
+    return
+  }
+
+  if (!isFormValid.value) return
+
+  const hostData = {
+    ...hostForm.value,
+    id: editingHost.value?.id || Date.now()
+  }
+
+  // 如果保存密码，先加密
+  if (hostData.savePassword && hostData.password) {
     try {
-      hosts.value = JSON.parse(saved)
+      const encryptResult = await window.electronAPI.encryptPassword(hostData.password)
+      if (encryptResult.success && encryptResult.data) {
+        hostData.password = encryptResult.data
+      } else {
+        toast.error('密码加密失败')
+        return
+      }
     } catch (e) {
-      console.error('Failed to load hosts:', e)
+      toast.error('密码加密失败: ' + e.message)
+      return
     }
   } else {
-    // 添加示例数据
-    hosts.value = [
-      {
-        id: 1,
-        name: '38.76.197.116',
-        host: '38.76.197.116',
-        port: 22,
-        username: 'root',
-        authType: 'password',
-        password: '',
-        privateKey: '',
-        savePassword: false,
-        protocol: 'ssh'
-      },
-      {
-        id: 2,
-        name: '156.226.28.65',
-        host: '156.226.28.65',
-        port: 22,
-        username: 'root',
-        authType: 'password',
-        password: '',
-        privateKey: '',
-        savePassword: false,
-        protocol: 'ssh'
-      }
-    ]
-    saveHosts()
+    hostData.password = ''
   }
-}
 
-// 保存主机列表到本地存储
-const saveHosts = () => {
-  localStorage.setItem('ssh-hosts', JSON.stringify(hosts.value))
-}
+  if (editingHost.value) {
+    const index = hosts.value.findIndex(h => h.id === editingHost.value.id)
+    if (index !== -1) {
+      hosts.value[index] = hostData
+    }
+    toast.success('主机已更新')
+  } else {
+    hosts.value.push(hostData)
+    toast.success('主机已添加')
+  }
 
-// 显示提示
-const showToast = (message, type = 'info') => {
-  const icons = {
-    success: 'icon-success',
-    error: 'icon-error',
-    info: 'icon-info',
-    warning: 'icon-warning'
-  }
-  const toast = {
-    id: Date.now(),
-    message,
-    type,
-    icon: icons[type]
-  }
-  toasts.value.push(toast)
-  setTimeout(() => {
-    toasts.value = toasts.value.filter(t => t.id !== toast.id)
-  }, 3000)
+  await saveHosts()
+  closeModal()
 }
 
 // 关闭模态框
 const closeModal = () => {
   showNewHostModal.value = false
   editingHost.value = null
+  showPassword.value = false
   resetForm()
 }
 
@@ -323,35 +657,13 @@ const resetForm = () => {
     savePassword: false,
     protocol: 'ssh'
   }
-}
-
-// 保存主机
-const saveHost = () => {
-  if (!isFormValid.value) return
-
-  const hostData = {
-    ...hostForm.value,
-    id: editingHost.value?.id || Date.now()
+  errors.value = {
+    host: '',
+    port: '',
+    username: '',
+    password: '',
+    privateKey: ''
   }
-
-  // 如果不保存密码，清空密码字段
-  if (!hostData.savePassword) {
-    hostData.password = ''
-  }
-
-  if (editingHost.value) {
-    const index = hosts.value.findIndex(h => h.id === editingHost.value.id)
-    if (index !== -1) {
-      hosts.value[index] = hostData
-    }
-    showToast('主机已更新', 'success')
-  } else {
-    hosts.value.push(hostData)
-    showToast('主机已添加', 'success')
-  }
-
-  saveHosts()
-  closeModal()
 }
 
 // 编辑主机
@@ -363,20 +675,28 @@ const editHost = (host) => {
     port: host.port || 22,
     username: host.username,
     authType: host.authType || 'password',
-    password: host.password || '',
+    password: '', // 编辑时密码字段为空，用户需要重新输入或使用保存的加密密码
     privateKey: host.privateKey || '',
-    savePassword: !!host.password,
+    savePassword: !!host.password, // 如果之前保存了密码，显示为已保存
     protocol: host.protocol || 'ssh'
   }
   showNewHostModal.value = true
 }
 
 // 删除主机
-const deleteHost = (id) => {
-  if (confirm('确定要删除这个主机吗？')) {
+const deleteHost = async (id) => {
+  // 如果已经在确认状态，执行删除
+  if (deleteConfirmId.value === id) {
     hosts.value = hosts.value.filter(h => h.id !== id)
-    saveHosts()
-    showToast('主机已删除', 'info')
+    await saveHosts()
+    toast.info('主机已删除')
+    deleteConfirmId.value = null
+  } else {
+    // 设置确认状态
+    deleteConfirmId.value = id
+    setTimeout(() => {
+      deleteConfirmId.value = null
+    }, 3000)
   }
 }
 
@@ -391,6 +711,7 @@ const selectKeyFile = async () => {
     const file = e.target.files[0]
     if (file) {
       hostForm.value.privateKey = file.path || file.name
+      clearError('privateKey')
     }
   }
   input.click()
@@ -401,9 +722,26 @@ const connecting = ref(false)
 const connectingHost = ref(null)
 
 const connectToHost = async (host) => {
+  // 如果有加密保存的密码，先解密
+  let password = host.password
+  if (host.savePassword && host.password) {
+    try {
+      const decryptResult = await window.electronAPI.decryptPassword(host.password)
+      if (decryptResult.success && decryptResult.data) {
+        password = decryptResult.data
+      } else {
+        toast.error('密码解密失败')
+        return
+      }
+    } catch (e) {
+      toast.error('密码解密失败: ' + e.message)
+      return
+    }
+  }
+
   // 检查是否有密码
-  if (!host.password) {
-    showToast('请先编辑主机配置并保存密码', 'warning')
+  if (!password) {
+    toast.warning('请先编辑主机配置并保存密码')
     return
   }
 
@@ -412,11 +750,11 @@ const connectToHost = async (host) => {
   connectingHost.value = host
 
   try {
-    // 触发连接事件，等待父组件处理
-    emit('connect', host)
+    // 触发连接事件，传递解密后的密码
+    emit('connect', { ...host, password })
   } catch (error) {
     connecting.value = false
-    showToast(`连接失败: ${error.message}`, 'error')
+    toast.error(`连接失败: ${error.message}`)
   }
 }
 
@@ -445,7 +783,7 @@ onMounted(() => {
   position: relative;
 }
 
-/* 连接中 Loading 遮罩 */
+/* ========== 连接中 Loading 遮罩 - Skeleton 风格 ========== */
 .connecting-overlay {
   position: absolute;
   top: 0;
@@ -453,87 +791,166 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(10, 10, 15, 0.95);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: var(--z-popover, 2000);
 }
 
 .connecting-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 32px;
 }
 
-.connecting-spinner {
-  position: relative;
-  width: 80px;
-  height: 80px;
+/* Skeleton 终端预览 */
+.skeleton-terminal {
+  width: 320px;
+  background: #0f0f14;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-.spinner-ring {
-  position: absolute;
-  width: 100%;
-  height: 100%;
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.skeleton-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.skeleton-dots .dot {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 3px solid transparent;
-  animation: spin 1.5s linear infinite;
 }
 
-.spinner-ring:nth-child(1) {
-  border-top-color: #00f0ff;
-  animation-delay: 0s;
-}
+.dot.red { background: #ff5f57; }
+.dot.yellow { background: #febc2e; }
+.dot.green { background: #28c840; }
 
-.spinner-ring:nth-child(2) {
-  border-right-color: #00d4aa;
-  animation-delay: 0.2s;
-  width: 70%;
-  height: 70%;
-  top: 15%;
-  left: 15%;
-}
-
-.spinner-ring:nth-child(3) {
-  border-bottom-color: #3b82f6;
-  animation-delay: 0.4s;
-  width: 40%;
-  height: 40%;
-  top: 30%;
-  left: 30%;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.connecting-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #e5e5e7;
-  letter-spacing: 2px;
-}
-
-.connecting-host {
-  font-size: 16px;
-  color: #00f0ff;
-  font-weight: 500;
-}
-
-.connecting-info {
-  font-size: 13px;
+.skeleton-title {
+  flex: 1;
+  font-size: 12px;
   color: #6b6b78;
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* 工具栏 */
+.skeleton-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 100%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-line.highlight {
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.05) 0%, rgba(0, 240, 255, 0.15) 50%, rgba(0, 240, 255, 0.05) 100%);
+  background-size: 200% 100%;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 连接状态 */
+.connecting-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-indicator {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid rgba(0, 240, 255, 0.3);
+  border-radius: 50%;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.pulse-ring.delay {
+  animation-delay: 0.5s;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.status-dot {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #00f0ff, #3b82f6);
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+  animation: dot-pulse 1s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e5e5e7;
+  letter-spacing: 1px;
+}
+
+.status-host {
+  font-size: 15px;
+  color: #00f0ff;
+  font-weight: 500;
+}
+
+.status-info {
+  font-size: 12px;
+  color: #6b6b78;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ========== 工具栏 ========== */
 .ssh-toolbar {
   display: flex;
   align-items: center;
@@ -554,7 +971,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 14px 18px;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
@@ -584,26 +1002,6 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(0, 240, 255, 0.22) 0%, rgba(59, 130, 246, 0.14) 100%);
   box-shadow: 0 6px 20px rgba(0, 240, 255, 0.18);
   transform: translateY(-2px);
-}
-
-.toolbar-btn.active {
-  background: rgba(0, 240, 255, 0.1);
-  color: #00f0ff;
-  border-color: rgba(0, 240, 255, 0.2);
-}
-
-.toolbar-btn .badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  background: rgba(0, 240, 255, 0.1);
-  border-radius: 10px;
-  font-size: 11px;
-  color: #00f0ff;
-  border: 1px solid rgba(0, 240, 255, 0.2);
 }
 
 .toolbar-right {
@@ -652,7 +1050,7 @@ onMounted(() => {
   color: #5a5a68;
 }
 
-/* 主机列表区域 */
+/* ========== 主机列表区域 ========== */
 .hosts-section {
   flex: 1;
   padding: 28px;
@@ -680,13 +1078,33 @@ onMounted(() => {
   letter-spacing: 0.3px;
 }
 
+/* CSS Grid 自适应布局 */
 .hosts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
 }
 
-/* 主机卡片 */
+/* 响应式断点 */
+@media (max-width: 1200px) {
+  .hosts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .hosts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .hosts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== 主机卡片 ========== */
 .host-card {
   display: flex;
   align-items: center;
@@ -779,8 +1197,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  min-width: 44px;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
@@ -850,7 +1268,7 @@ onMounted(() => {
   color: #e5e5e7;
 }
 
-/* 模态框 */
+/* ========== 模态框 ========== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -861,18 +1279,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal-overlay, 3001);
   backdrop-filter: blur(8px);
   animation: fadeIn 0.25s ease;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal-container {
@@ -917,8 +1331,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
@@ -949,6 +1363,7 @@ onMounted(() => {
   border-radius: 3px;
 }
 
+/* ========== 表单样式 ========== */
 .form-group {
   margin-bottom: 20px;
 }
@@ -975,6 +1390,11 @@ onMounted(() => {
   letter-spacing: 0.2px;
 }
 
+.form-group label .required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
 .form-group input[type="text"],
 .form-group input[type="password"],
 .form-group input[type="number"] {
@@ -999,6 +1419,116 @@ onMounted(() => {
   color: #5a5a68;
 }
 
+/* 错误状态 */
+.form-group.has-error input {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.form-group.has-error input:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+.error-message i {
+  font-size: 12px;
+}
+
+.error-slide-enter-active,
+.error-slide-leave-active {
+  transition: all 0.2s ease;
+}
+
+.error-slide-enter-from,
+.error-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* 密码输入框 */
+.password-input {
+  position: relative;
+  display: flex;
+}
+
+.password-input input {
+  padding-right: 52px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  color: #6b6b78;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.toggle-password:hover {
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.1);
+}
+
+/* 密码强度指示器 */
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.strength-fill.weak {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.strength-fill.medium {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.strength-fill.strong {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.strength-text {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.strength-text.weak { color: #ef4444; }
+.strength-text.medium { color: #f59e0b; }
+.strength-text.strong { color: #10b981; }
+
 /* 认证方式标签 */
 .auth-tabs {
   display: flex;
@@ -1007,7 +1537,8 @@ onMounted(() => {
 
 .auth-tab {
   flex: 1;
-  padding: 12px;
+  padding: 14px;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
@@ -1041,7 +1572,8 @@ onMounted(() => {
 }
 
 .file-btn {
-  padding: 12px 20px;
+  padding: 14px 20px;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
@@ -1068,13 +1600,35 @@ onMounted(() => {
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  accent-color: #00f0ff;
-  cursor: pointer;
+  display: none;
 }
 
-.checkbox-label span {
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.checkbox-label input:checked + .checkbox-custom {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.checkbox-label input:checked + .checkbox-custom::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  color: #00f0ff;
+}
+
+.checkbox-label span:last-child {
   font-size: 13px;
   color: #9b9ba5;
   font-weight: 500;
@@ -1090,7 +1644,8 @@ onMounted(() => {
 }
 
 .btn {
-  padding: 12px 24px;
+  padding: 14px 24px;
+  min-height: 44px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
@@ -1129,76 +1684,25 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-/* Toast 提示 */
-.toast-container {
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  z-index: 1100;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* 删除按钮确认状态 */
+.action-btn.danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
 }
 
-.toast {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  color: #e0e0e0;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  animation: toastIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(10px);
+.action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.25);
 }
 
-@keyframes toastIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+/* 过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
 }
 
-.toast.success {
-  border-color: rgba(40, 202, 65, 0.4);
-  background: linear-gradient(135deg, rgba(40, 202, 65, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
-  color: #28ca41;
-}
-
-.toast.error {
-  border-color: rgba(255, 95, 87, 0.4);
-  background: linear-gradient(135deg, rgba(255, 95, 87, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
-  color: #ff5f57;
-}
-
-.toast.warning {
-  border-color: rgba(250, 204, 21, 0.4);
-  background: linear-gradient(135deg, rgba(250, 204, 21, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
-  color: #facc15;
-}
-
-.toast.info {
-  border-color: rgba(96, 165, 250, 0.4);
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
-  color: #60a5fa;
-}
-
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.toast-enter-from,
-.toast-leave-to {
-  transform: translateX(100%);
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 </style>
