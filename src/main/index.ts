@@ -52,7 +52,8 @@ function createWindow(): void {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset',
+    frame: false,
+    titleBarStyle: 'hidden',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -85,6 +86,14 @@ function createWindow(): void {
     })
     ptyProcesses.clear()
     mainWindow = null
+  })
+
+  // 监听窗口最大化/还原事件，通知渲染进程
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window-state-change', { maximized: true })
+  })
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window-state-change', { maximized: false })
   })
 }
 
@@ -154,11 +163,16 @@ ipcMain.handle('pty-create', (_event, { id, cols, rows }: PtyCreateOptions): Pty
     let shellArgs: string[] = []
     if (process.platform === 'win32') {
       if (shell.includes('pwsh.exe')) {
-        // PowerShell Core: 启用颜色，隐藏 Logo
-        shellArgs = ['-NoLogo', '-WorkingDirectory', process.env.HOME || process.cwd()]
+        // PowerShell Core: 启用颜色，隐藏 Logo，配置 $PSStyle
+        shellArgs = [
+          '-NoLogo',
+          '-NoExit',
+          '-Command',
+          '$PSStyle.OutputRendering = \"Ansi\"'
+        ]
       } else if (shell.includes('powershell')) {
-        // Windows PowerShell 5.1
-        shellArgs = ['-NoLogo']
+        // Windows PowerShell 5.1: 使用 registry 设置或启动配置
+        shellArgs = ['-NoLogo', '-ExecutionPolicy', 'Bypass']
       }
       // cmd.exe 不需要特殊参数
     } else {
@@ -184,6 +198,12 @@ ipcMain.handle('pty-create', (_event, { id, cols, rows }: PtyCreateOptions): Pty
       delete env.NO_COLOR_
       // 设置 PowerShell 颜色输出相关变量
       env.PSModulePath = process.env.PSModulePath || ''
+      // 强制启用虚拟终端处理
+      env.FORCE_COLOR = '1'
+      env.CLICOLOR = '1'
+      env.CLICOLOR_FORCE = '1'
+      // 让 PowerShell 知道支持 ANSI
+      env.TERM_PROGRAM = 'xterm-256color'
     }
 
     const ptyProcess = pty.spawn(shell, shellArgs, {
@@ -666,4 +686,229 @@ ipcMain.handle('save-terminal-settings', (_event, settings: unknown) => {
   } catch (error) {
     return { success: false, error: (error as Error).message }
   }
+})
+
+// ===================== 窗口控制相关 =====================
+
+// 最小化窗口
+ipcMain.handle('window-minimize', () => {
+  if (mainWindow) {
+    mainWindow.minimize()
+    return { success: true }
+  }
+  return { success: false, error: 'Window not found' }
+})
+
+// 最大化/还原窗口
+ipcMain.handle('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow.maximize()
+    }
+    return { success: true }
+  }
+  return { success: false, error: 'Window not found' }
+})
+
+// 关闭窗口
+ipcMain.handle('window-close', () => {
+  if (mainWindow) {
+    mainWindow.close()
+    return { success: true }
+  }
+  return { success: false, error: 'Window not found' }
+})
+
+// 获取窗口是否最大化
+ipcMain.handle('is-maximized', () => {
+  if (mainWindow) {
+    return mainWindow.isMaximized()
+  }
+  return false
+})
+
+// ===================== AI API 代理 =====================
+
+interface AIChatRequest {
+  provider: string
+  apiKey?: string
+  baseUrl?: string
+  model: string
+  messages: Array<{ role: string; content: string }>
+}
+
+// 存储活跃的流读取器
+const activeStreams = new Map<string, ReadableStreamDefaultReader<Uint8Array>>()
+
+// AI 流式聊天请求代理
+ipcMain.handle('ai-chat-stream', async (_event, request: AIChatRequest) => {
+  try {
+    const { provider, apiKey, baseUrl, model, messages } = request
+
+    console.log('[AI Chat] Request:', { provider, model, baseUrl, hasApiKey: !!apiKey })
+
+    let url: string
+    let headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+    let body: any
+
+    switch (provider) {
+      case 'openai':
+        url = `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`
+        headers['Authorization'] = `Bearer ${apiKey}`
+        body = {
+          model,
+          messages,
+          stream: true
+        }
+        break
+
+      case 'claude':
+        url = `${baseUrl || 'https://api.anthropic.com/v1'}/messages`
+        headers['x-api-key'] = apiKey || ''
+        headers['anthropic-version'] = '2023-06-01'
+
+        // Claude 要求消息严格交替 user/assistant
+        const claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+        let lastRole: string | null = null
+
+        for (const m of messages) {
+          if (m.role === 'system') continue // system 单独处理
+          const role = m.role === 'assistant' ? 'assistant' : 'user'
+          if (role === lastRole) {
+            // 合并相同角色的消息
+            const lastMsg = claudeMessages[claudeMessages.length - 1]
+            if (lastMsg) {
+              lastMsg.content += '\n\n' + m.content
+            }
+          } else {
+            claudeMessages.push({ role, content: m.content })
+            lastRole = role
+          }
+        }
+
+        body = {
+          model,
+          max_tokens: 4096,
+          messages: claudeMessages,
+          system: messages.find(m => m.role === 'system')?.content || 'You are a helpful assistant.',
+          stream: true
+        }
+        break
+
+      case 'ollama':
+        url = `${baseUrl || 'http://localhost:11434'}/api/chat`
+        body = {
+          model,
+          messages,
+          stream: true
+        }
+        break
+
+      case 'custom':
+        url = `${baseUrl}/chat/completions`
+        if (apiKey) {
+          headers['Authorization'] = `Bearer ${apiKey}`
+        }
+        body = {
+          model,
+          messages,
+          stream: true
+        }
+        break
+
+      default:
+        return { success: false, error: `不支持的提供商: ${provider}` }
+    }
+
+    console.log('[AI Chat] Sending request to:', url)
+    console.log('[AI Chat] Model:', body.model)
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    })
+
+    console.log('[AI Chat] Response status:', response.status)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      let errorMessage = `HTTP ${response.status}`
+      try {
+        const errorJson = JSON.parse(errorText)
+        errorMessage = errorJson.error?.message || errorJson.message || errorText
+      } catch {
+        errorMessage = errorText || errorMessage
+      }
+      return { success: false, error: errorMessage }
+    }
+
+    // 返回流数据
+    const reader = response.body?.getReader()
+    if (!reader) {
+      return { success: false, error: '无法读取响应流' }
+    }
+
+    // 创建一个 ID 用于标识这次流
+    const streamId = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    activeStreams.set(streamId, reader)
+
+    // 开始读取流
+    const readStream = async () => {
+      const decoder = new TextDecoder()
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('ai-stream-data', { streamId, done: true })
+            }
+            activeStreams.delete(streamId)
+            break
+          }
+
+          const chunk = decoder.decode(value, { stream: true })
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('ai-stream-data', { streamId, data: chunk })
+          }
+        }
+      } catch (error) {
+        console.error('[AI Stream] Error reading stream:', error)
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('ai-stream-data', {
+            streamId,
+            error: error instanceof Error ? error.message : '读取流失败'
+          })
+        }
+        activeStreams.delete(streamId)
+      }
+    }
+
+    // 启动读取
+    readStream()
+
+    return { success: true, streamId }
+  } catch (error) {
+    console.error('[AI Chat] Error:', error)
+    return { success: false, error: error instanceof Error ? error.message : '请求失败' }
+  }
+})
+
+// 中止 AI 流
+ipcMain.handle('ai-abort-stream', (_event, streamId: string) => {
+  const reader = activeStreams.get(streamId)
+  if (reader) {
+    try {
+      reader.cancel()
+      activeStreams.delete(streamId)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+  return { success: true }
 })

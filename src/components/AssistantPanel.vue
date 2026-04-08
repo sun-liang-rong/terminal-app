@@ -1,868 +1,936 @@
 <template>
-  <div class="assistant-panel">
-    <!-- 顶部搜索区 -->
-    <div class="search-section">
-      <div class="system-select">
-        <select v-model="selectedPlatform" :disabled="loading">
-          <option value="auto">自动</option>
-          <option value="windows">Windows</option>
-          <option value="macos">macOS</option>
-          <option value="linux">Linux</option>
-        </select>
+  <aside class="ai-sidebar">
+    <!-- 标题栏 -->
+    <div class="ai-header">
+      <div class="ai-title-wrapper">
+        <svg class="ai-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+        <h3 class="ai-title">AI 助手</h3>
       </div>
-      <div class="search-box">
-        <i class="iconfont icon-search"></i>
-        <input
-          type="text"
-          v-model="searchQuery"
-          placeholder="描述你的场景，如：查看端口占用..."
-          @keyup.enter="generateCommands"
-          :disabled="loading"
-        />
-      </div>
-      <button class="generate-btn ai-button" @click="generateCommands" :disabled="loading || !searchQuery.trim()">
-        <i class="iconfont icon-ai" :class="{ 'ai-glow': !loading }" v-if="!loading"></i>
-        <span class="loading-spinner" v-else></span>
-        <span>{{ loading ? '生成中...' : '生成' }}</span>
-      </button>
-      <button class="settings-btn" @click="showSettings = true" title="AI 设置">
-        <i class="iconfont icon-settings"></i>
-      </button>
-    </div>
-
-    <!-- 热门场景 -->
-    <div class="hot-scenes" v-if="!searchQuery || (commands.length === 0 && !loading)">
-      <div class="section-label">热门场景</div>
-      <div class="scene-tags">
-        <button
-          v-for="scene in hotScenes"
-          :key="scene"
-          class="scene-tag"
-          @click="quickSearch(scene)"
-        >
-          {{ scene }}
+      <div class="header-actions">
+        <button class="header-btn" @click="clearMessages" title="清空对话">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+          </svg>
+        </button>
+        <button class="header-btn" @click="onClose" title="关闭">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
         </button>
       </div>
     </div>
 
-    <!-- 加载中 Skeleton -->
-    <div class="loading-section" v-if="loading">
-      <div class="section-label">正在生成命令...</div>
-      <div class="skeleton-list">
-        <div class="skeleton-card">
-          <div class="skeleton-header">
-            <div class="skeleton-title"></div>
-            <div class="skeleton-badge"></div>
-          </div>
-          <div class="skeleton-code"></div>
-          <div class="skeleton-desc">
-            <div class="skeleton-line"></div>
-            <div class="skeleton-line short"></div>
-          </div>
+    <!-- 消息区域 -->
+    <div class="ai-messages" ref="messagesRef">
+      <!-- 欢迎消息 -->
+      <div v-if="chatMessages.length === 0" class="welcome-message">
+        <div class="welcome-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
         </div>
-        <div class="skeleton-card">
-          <div class="skeleton-header">
-            <div class="skeleton-title"></div>
-            <div class="skeleton-badge"></div>
-          </div>
-          <div class="skeleton-code short"></div>
-          <div class="skeleton-desc">
-            <div class="skeleton-line"></div>
-          </div>
-        </div>
-        <div class="skeleton-card">
-          <div class="skeleton-header">
-            <div class="skeleton-title"></div>
-            <div class="skeleton-badge"></div>
-          </div>
-          <div class="skeleton-code"></div>
-          <div class="skeleton-desc">
-            <div class="skeleton-line"></div>
-            <div class="skeleton-line short"></div>
-          </div>
-        </div>
+        <h4>有什么可以帮您的？</h4>
+        <p>配置好模型后，我们可以开始对话了</p>
       </div>
-    </div>
 
-    <!-- 未配置提示 -->
-    <EmptyState
-      v-if="!isConfigured"
-      type="config"
-      icon="icon-settings"
-      title="请先配置 AI API Key"
-      description="配置 AI 服务后即可使用智能命令生成功能"
-    >
-      <template #actions>
-        <button class="primary" @click="showSettings = true">打开设置</button>
-      </template>
-    </EmptyState>
-
-    <!-- 命令列表 -->
-    <div class="commands-section" v-if="commands.length > 0 && !loading">
-      <div class="section-label">相关命令</div>
-      <div class="commands-list">
+      <!-- 消息列表 -->
+      <template v-else>
         <div
-          v-for="(cmd, index) in commands"
-          :key="index"
-          class="command-card"
+          v-for="message in chatMessages"
+          :key="message.id"
+          class="message-item"
+          :class="message.role"
         >
-          <div class="command-header">
-            <span class="command-name">{{ cmd.name }}</span>
-            <span class="command-platform" :class="cmd.platform">{{ getPlatformLabel(cmd.platform) }}</span>
-          </div>
-          <div class="command-code">
-            <code>{{ cmd.command }}</code>
-          </div>
-          <div class="command-desc">{{ cmd.description }}</div>
-          <button class="copy-btn" @click="copyCommand(cmd.command)" :class="{ copied: copiedIndex === index }">
-            <i class="iconfont" :class="copiedIndex === index ? 'icon-check' : 'icon-copy'"></i>
-            <span>{{ copiedIndex === index ? '已复制' : '复制' }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 空状态 -->
-    <EmptyState
-      v-if="searchQuery && !loading && commands.length === 0 && isConfigured"
-      type="search"
-      icon="icon-search"
-      title="准备就绪"
-      description="点击「生成」按钮，AI 将为您推荐相关命令"
-      size="large"
-    />
-
-    <!-- 设置弹窗 -->
-    <div class="settings-modal" v-if="showSettings" @click.self="showSettings = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>AI 设置</h3>
-          <button class="close-btn" @click="showSettings = false">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>AI 服务</label>
-            <div class="provider-tabs">
-              <button
-                class="provider-tab"
-                :class="{ active: settings.provider === 'ollama' }"
-                @click="settings.provider = 'ollama'"
-              >
-                Ollama
-              </button>
-              <button
-                class="provider-tab"
-                :class="{ active: settings.provider === 'claude' }"
-                @click="settings.provider = 'claude'"
-              >
-                Claude
-              </button>
-              <button
-                class="provider-tab"
-                :class="{ active: settings.provider === 'openai' }"
-                @click="settings.provider = 'openai'"
-              >
-                OpenAI
-              </button>
+          <!-- 头像 -->
+          <div class="message-avatar">
+            <div v-if="message.role === 'assistant'" class="avatar-ai">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <div v-else class="avatar-user">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
             </div>
           </div>
-          <div class="form-group" v-if="settings.provider !== 'ollama'">
-            <label>API Key</label>
-            <input
-              type="password"
-              v-model="settings.apiKey"
-              :placeholder="settings.provider === 'claude' ? 'sk-ant-...' : 'sk-...'"
-            />
-          </div>
-          <div class="form-group" v-if="settings.provider === 'ollama'">
-            <label>Ollama 服务地址</label>
-            <input
-              type="text"
-              v-model="settings.baseUrl"
-              placeholder="http://localhost:11434 或 http://192.168.x.x:11434"
-            />
-          </div>
-          <div class="form-group">
-            <label>模型</label>
-            <input
-              type="text"
-              v-model="settings.model"
-              :placeholder="getDefaultModel()"
-            />
-          </div>
-          <div class="form-group" v-if="settings.provider === 'openai'">
-            <label>API 地址（可选）</label>
-            <input
-              type="text"
-              v-model="settings.baseUrl"
-              placeholder="https://api.openai.com/v1"
-            />
+
+          <!-- 内容 -->
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-author">{{ message.role === 'assistant' ? 'AI' : '您' }}</span>
+              <span class="message-time">{{ formatTime(message.timestamp) }}</span>
+            </div>
+            <div class="message-body" v-html="renderMarkdown(message.content)"></div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn secondary" @click="showSettings = false">取消</button>
-          <button class="btn primary" @click="saveSettings">保存</button>
+
+        <!-- 流式消息 -->
+        <div v-if="isLoading && currentStreamingMessage" class="message-item assistant streaming">
+          <div class="message-avatar">
+            <div class="avatar-ai">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-author">AI</span>
+              <span class="typing-indicator">思考中<span class="dots">...</span></span>
+            </div>
+            <div class="message-body" v-html="renderMarkdown(currentStreamingMessage)"></div>
+          </div>
+        </div>
+      </template>
+
+      <div ref="messagesEndRef"></div>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="ai-input-area">
+      <!-- 工具栏 -->
+      <div class="input-toolbar">
+        <div class="model-selector" @click="showModelMenu = !showModelMenu">
+          <div class="model-icon-wrapper">
+            <svg class="model-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          <span class="model-name">{{ currentModel?.name || '选择模型' }}</span>
+          <svg class="dropdown-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 10l5 5 5-5z"/>
+          </svg>
+        </div>
+
+        <!-- 模型菜单 -->
+        <div class="model-menu" v-if="showModelMenu" v-click-outside="() => showModelMenu = truncate">
+          <div
+            v-for="model in modelList"
+            :key="model.id"
+            class="model-option"
+            :class="{ active: currentModelId === model.id }"
+            @click="selectModel(model.id)"
+          >
+            <div class="model-option-content">
+              <div class="model-info">
+                <span class="model-option-name">{{ model.name }}</span>
+                <span class="model-option-id">{{ model.model }}</span>
+              </div>
+              <span class="model-badge" :class="model.provider">{{ getProviderLabel(model.provider) }}</span>
+            </div>
+          </div>
+          <div v-if="modelList.length === 0" class="model-option-empty">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            <span>暂无配置模型<br>请先在设置中添加</span>
+          </div>
         </div>
       </div>
+
+      <!-- 文本输入 -->
+      <div class="input-wrapper">
+        <textarea
+          v-model="inputMessage"
+          class="message-input"
+          :placeholder="currentModel ? '输入消息...' : '请先选择一个模型'"
+          rows="1"
+          :disabled="isLoading || !currentModel"
+          @keydown.enter.prevent="handleSend"
+        ></textarea>
+        <button
+          class="send-btn"
+          @click="handleSend"
+          :disabled="!inputMessage.trim() || isLoading || !currentModel"
+          :class="{ loading: isLoading }"
+        >
+          <svg v-if="!isLoading" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+          <svg v-else class="spinner" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="10"/>
+          </svg>
+        </button>
+      </div>
     </div>
-  </div>
+  </aside>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { aiService, type Command, type AISettings } from '../utils/ai'
-import { toast } from '../utils/notification'
-import EmptyState from './EmptyState.vue'
+import { ref, watch, nextTick, onMounted, computed } from 'vue'
+import { marked } from 'marked'
+import hljs from 'highlight.js'
+import {
+  initAIModels,
+  aiModelsState,
+  currentModelId,
+  getCurrentModel,
+  setCurrentModel,
+  type AIModelConfig
+} from '../utils/aiModelsStore'
+import {
+  chatMessages,
+  isLoading,
+  currentStreamingMessage,
+  sendMessage as sendToAI,
+  clearChat
+} from '../utils/aiChatService'
+import { truncate } from 'original-fs'
 
-// 获取 electron API
-const electronAPI = window.electronAPI
-
-// 状态
-const searchQuery = ref('')
-const commands = ref<Command[]>([])
-const loading = ref(false)
-const copiedIndex = ref<number | null>(null)
-const showSettings = ref(false)
-const selectedPlatform = ref('auto')
-
-// 设置
-const settings = ref<AISettings>(aiService.getSettings())
-const isConfigured = computed(() => aiService.isConfigured())
-
-// 热门场景
-const hotScenes = [
-  '查看端口占用',
-  '查找大文件',
-  '杀死进程',
-  '查看磁盘空间',
-  '解压文件',
-  'Git撤销提交',
-  'Docker清理',
-  '查看日志'
-]
-
-// 获取平台
-const getPlatform = (): string => {
-  if (selectedPlatform.value !== 'auto') {
-    return selectedPlatform.value
-  }
-  return navigator.platform.toLowerCase().includes('win') ? 'windows' :
-         navigator.platform.toLowerCase().includes('mac') ? 'macos' : 'linux'
-}
-
-// 获取平台标签
-const getPlatformLabel = (platform: string): string => {
-  const labels: Record<string, string> = {
-    'all': '通用',
-    'macos': 'macOS',
-    'windows': 'Windows',
-    'linux': 'Linux'
-  }
-  return labels[platform] || platform
-}
-
-// 获取默认模型
-const getDefaultModel = (): string => {
-  if (settings.value.provider === 'ollama') return 'llama3'
-  return settings.value.provider === 'claude' ? 'claude-3-haiku-20240307' : 'gpt-3.5-turbo'
-}
-
-// 快速搜索
-const quickSearch = (scene: string) => {
-  searchQuery.value = scene
-  generateCommands()
-}
-
-// 生成命令
-const generateCommands = async () => {
-  if (!searchQuery.value.trim() || loading.value) return
-  if (!isConfigured.value) {
-    showSettings.value = true
-    return
-  }
-
-  loading.value = true
-  commands.value = []
-
-  try {
-    const platform = getPlatform()
-    const result = await aiService.generateCommands(searchQuery.value, platform)
-    if (result.length === 0) {
-      toast.warning('未找到相关命令，请尝试其他描述')
+// 配置 marked
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  headerIds: false,
+  highlight: (code, lang) => {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value
     }
-    commands.value = result
-  } catch (e: any) {
-    toast.error(e.message || '生成失败，请重试')
-  } finally {
-    loading.value = false
+    return hljs.highlightAuto(code).value
   }
-}
-
-// 复制命令
-const copyCommand = async (command: string) => {
-  try {
-    await electronAPI.clipboardWrite(command)
-    copiedIndex.value = commands.value.findIndex(c => c.command === command)
-    toast.success('命令已复制')
-    setTimeout(() => {
-      copiedIndex.value = null
-    }, 1500)
-  } catch (e) {
-    toast.error('复制失败')
-  }
-}
-
-// 保存设置
-const saveSettings = async () => {
-  await aiService.saveSettings(settings.value)
-  toast.success('AI 设置已保存')
-  showSettings.value = false
-}
-
-// 加载设置
-const loadSettings = async () => {
-  // 等待设置加载完成
-  settings.value = await aiService.waitForSettings()
-}
-
-onMounted(() => {
-  loadSettings()
 })
+
+const props = defineProps<{
+  visible: boolean
+}>()
+
+const emit = defineEmits(['close'])
+
+// refs
+const inputMessage = ref('')
+const messagesRef = ref<HTMLDivElement | null>(null)
+const messagesEndRef = ref<HTMLDivElement | null>(null)
+const showModelMenu = ref(false)
+
+// 初始化
+onMounted(() => {
+  initAIModels()
+})
+
+// 计算属性
+const currentModel = computed<AIModelConfig | null>(() => getCurrentModel())
+const modelList = computed<AIModelConfig[]>(() => aiModelsState.value)
+
+// 渲染 Markdown
+const renderMarkdown = (content: string): string => {
+  return marked.parse(content) as string
+}
+
+// 格式化时间
+const formatTime = (timestamp: number): string => {
+  return new Date(timestamp).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 获取提供商标签
+const getProviderLabel = (provider: string): string => {
+  const labels: Record<string, string> = {
+    openai: 'OpenAI',
+    claude: 'Claude',
+    ollama: 'Ollama',
+    custom: 'Custom'
+  }
+  return labels[provider] || provider
+}
+
+// 发送消息
+const handleSend = async () => {
+  if (!inputMessage.value.trim() || isLoading.value || !currentModel.value) return
+
+  const content = inputMessage.value.trim()
+  inputMessage.value = ''
+
+  await sendToAI(content, currentModel.value, () => {
+    scrollToBottom()
+  })
+}
+
+// 选择模型
+const selectModel = (modelId: string) => {
+  setCurrentModel(modelId)
+  showModelMenu.value = false
+}
+
+// 清空消息
+const clearMessages = () => {
+  clearChat()
+}
+
+// 滚动到底部
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesEndRef.value) {
+      messagesEndRef.value.scrollIntoView({ behavior: 'smooth' })
+    }
+  })
+}
+
+
+// 关闭面板
+const onClose = () => {
+  emit('close')
+}
+
+// 监听消息变化自动滚动
+watch(chatMessages, () => {
+  scrollToBottom()
+}, { deep: true })
+
+// v-click-outside 指令
+const vClickOutside = {
+  mounted(el: HTMLElement, binding: any) {
+    el._clickOutside = (event: Event) => {
+      if (!(el === event.target || el.contains(event.target as Node))) {
+        binding.value()
+      }
+    }
+    document.addEventListener('click', el._clickOutside)
+  },
+  unmounted(el: HTMLElement) {
+    document.removeEventListener('click', el._clickOutside)
+  }
+}
 </script>
 
 <style scoped>
-.assistant-panel {
+/* ========== 基础布局 ========== */
+.ai-sidebar {
+  width: 360px;
+  height: 100%;
+  padding: 0 10px;
+  border-left: 1px solid rgba(70, 72, 77, 0.15);
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: var(--color-bg-surface, #1a1a24);
-  color: var(--color-text-input, #e0e0e0);
+  position: relative;
+  flex-shrink: 0;
+  backdrop-filter: blur(20px);
+  box-sizing: border-box;
+  overflow: hidden; /* 防止内容溢出 */
+}
+
+/* ========== Header ========== */
+.ai-header {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(17, 19, 24, 0.6);
+  border-bottom: 1px solid rgba(70, 72, 77, 0.1);
+  min-width: 0;
+}
+
+.ai-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
 }
 
-/* 搜索区 */
-.search-section {
-  padding: 16px 20px;
-  background: var(--color-bg-elevated, #15151b);
-  border-bottom: 1px solid var(--color-border-default, #23232c);
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
+.ai-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--color-primary, #b79fff);
 }
 
-.system-select select {
-  min-height: 44px;
-  padding: 0 14px;
-  background: var(--color-bg-input, #0d0d12);
-  border: 1px solid var(--color-border-input, #23232c);
-  border-radius: 10px;
-  color: var(--color-text-input, #e0e0e0);
-  font-size: 13px;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.2s ease;
+.ai-title {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-on-surface, #f6f6fc);
+  letter-spacing: -0.2px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.system-select select:hover {
-  border-color: var(--color-brand-primary, #00f0ff);
-}
-
-.system-select select:focus {
-  border-color: var(--color-brand-primary, #00f0ff);
-}
-
-.system-select select option {
-  background: var(--color-bg-surface, #1a1a24);
-  color: var(--color-text-input, #e0e0e0);
-}
-
-.search-box {
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  background: var(--color-bg-input, #0d0d12);
-  border: 1px solid var(--color-border-input, #23232c);
-  border-radius: 10px;
-  flex: 1;
-  min-height: 44px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
-.search-box i {
-  color: var(--color-text-tertiary, #6b6b78);
-  font-size: 16px;
-}
-
-.search-box input {
-  flex: 1;
-  width: 100%;
+.header-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
-  outline: none;
-  color: var(--color-text-input, #e0e0e0);
-  font-size: 14px;
-  min-height: 44px;
-}
-
-.search-box input::placeholder {
-  color: var(--color-text-disabled, #5a5a68);
-}
-
-.settings-btn {
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border-input, #23232c);
-  background: transparent;
-  color: var(--color-text-tertiary, #6b6b78);
+  border-radius: 8px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: var(--color-on-surface-variant, #aaabb0);
   transition: all 0.2s ease;
 }
 
-.settings-btn:hover {
-  background: var(--color-border-input, #23232c);
-  color: var(--color-brand-primary, #00f0ff);
-  border-color: var(--color-brand-primary, #00f0ff);
+.header-btn:hover {
+  background: rgba(29, 32, 37, 0.6);
+  color: var(--color-on-surface, #f6f6fc);
 }
 
-.generate-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 20px;
-  min-height: 44px;
-  background: var(--color-ai-gradient, linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(0, 240, 255, 0.15) 100%));
-  border: 1px solid rgba(139, 92, 246, 0.35);
-  border-radius: 10px;
-  color: var(--color-ai-secondary, #a78bfa);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.generate-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.35) 0%, rgba(0, 240, 255, 0.2) 100%);
-  border-color: rgba(139, 92, 246, 0.5);
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.25);
-  transform: translateY(-1px);
-}
-
-.generate-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.generate-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.loading-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--color-bg-base, #0f0f14);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* 热门场景 */
-.hot-scenes {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border-default, #23232c);
-}
-
-.section-label {
-  font-size: 12px;
-  color: var(--color-text-tertiary, #6b6b78);
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* 加载中 Skeleton */
-.loading-section {
-  flex: 1;
-  padding: 16px 20px;
-  overflow-y: auto;
-}
-
-.skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.skeleton-card {
-  background: var(--color-bg-hover, #23232c);
-  border: 1px solid var(--color-border-default, #2a2a35);
-  border-radius: 8px;
-  padding: 16px;
-  animation: skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes skeleton-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-
-.skeleton-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.skeleton-title {
-  width: 120px;
-  height: 16px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 100%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
-  border-radius: 4px;
-}
-
-.skeleton-badge {
-  width: 60px;
+.header-btn svg {
+  width: 18px;
   height: 18px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 100%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
-  border-radius: 4px;
 }
 
-.skeleton-code {
-  height: 36px;
-  background: linear-gradient(90deg, rgba(0, 240, 255, 0.03) 0%, rgba(0, 240, 255, 0.08) 50%, rgba(0, 240, 255, 0.03) 100%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-
-.skeleton-code.short {
-  height: 28px;
-  width: 80%;
-}
-
-.skeleton-desc {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.skeleton-line {
-  height: 12px;
+/* ========== Messages ========== */
+.ai-messages {
   width: 100%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.03) 100%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
-  border-radius: 3px;
-}
-
-.skeleton-line.short {
-  width: 60%;
-}
-
-@keyframes skeleton-shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-.scene-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.scene-tag {
-  padding: 6px 12px;
-  background: var(--color-bg-hover, #23232c);
-  border: 1px solid var(--color-border-default, #2a2a35);
-  border-radius: 16px;
-  color: var(--color-text-secondary, #9b9ba5);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.scene-tag:hover {
-  background: var(--color-bg-active, #2a2a35);
-  color: var(--color-brand-primary, #00f0ff);
-  border-color: var(--color-brand-primary, #00f0ff);
-}
-
-/* 未配置提示 - 已改用 EmptyState 组件 */
-
-/* 命令列表 */
-.commands-section {
-  flex: 1;
-  padding: 16px 20px;
+  height: 100%;
   overflow-y: auto;
-}
-
-.commands-list {
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.command-card {
-  background: var(--color-bg-hover, #23232c);
-  border: 1px solid var(--color-border-default, #2a2a35);
-  border-radius: 8px;
-  padding: 16px;
-  position: relative;
+/* 欢迎消息 */
+.welcome-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  opacity: 0.6;
 }
 
-.command-header {
+.welcome-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(183, 159, 255, 0.1);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: var(--color-primary, #b79fff);
 }
 
-.command-name {
-  font-size: 14px;
+.welcome-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.welcome-message h4 {
+  font-size: 16px;
   font-weight: 600;
-  color: var(--color-text-input, #e0e0e0);
+  color: var(--color-on-surface, #f6f6fc);
+  margin: 0 0 8px 0;
 }
 
-.command-platform {
-  font-size: 10px;
-  padding: 2px 8px;
+.welcome-message p {
+  font-size: 13px;
+  color: var(--color-on-surface-variant, #aaabb0);
+  margin: 0;
+}
+
+/* 消息项 */
+.message-item {
+  display: flex;
+  gap: 12px;
+  animation: messageIn 0.3s ease;
+}
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-item.user {
+  flex-direction: row-reverse;
+}
+
+/* 头像 */
+.message-avatar {
+  flex-shrink: 0;
+}
+
+.avatar-ai,
+.avatar-user {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-ai {
+  background: rgba(183, 159, 255, 0.15);
+  color: var(--color-primary, #b79fff);
+}
+
+.avatar-user {
+  background: rgba(45, 183, 242, 0.15);
+  color: var(--color-secondary, #2db7f2);
+}
+
+.avatar-ai svg,
+.avatar-user svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 消息内容 */
+.message-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-item.user .message-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.message-item.user .message-header {
+  flex-direction: row-reverse;
+}
+
+.message-author {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-on-surface, #f6f6fc);
+}
+
+.message-time {
+  font-size: 11px;
+  color: var(--color-on-surface-variant, #aaabb0);
+}
+
+.typing-indicator {
+  font-size: 11px;
+  color: var(--color-primary, #b79fff);
+}
+
+.dots {
+  animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+  0%, 20% { opacity: 0.2; }
+  40% { opacity: 1; }
+  60%, 100% { opacity: 0.2; }
+}
+
+/* 消息体 */
+.message-body {
+  background: rgba(29, 32, 37, 0.6);
+  border: 1px solid rgba(70, 72, 77, 0.15);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-on-surface, #f6f6fc);
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.message-item.user .message-body {
+  background: rgba(183, 159, 255, 0.1);
+  border-color: rgba(183, 159, 255, 0.2);
+}
+
+.message-item.assistant .message-body {
+  border-bottom-left-radius: 4px;
+}
+
+.message-item.user .message-body {
+  border-bottom-right-radius: 4px;
+}
+
+/* Markdown 样式 */
+.message-body :deep(p) {
+  margin: 0 0 8px 0;
+}
+
+.message-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.message-body :deep(code) {
+  font-family: var(--font-mono, 'Fira Code', monospace);
+  font-size: 12px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 4px;
-  background: var(--color-bg-active, #3a3a48);
-  color: var(--color-text-secondary, #9b9ba5);
+  color: var(--color-secondary, #2db7f2);
 }
 
-.command-platform.macos {
-  background: rgba(0, 240, 255, 0.1);
-  color: var(--color-brand-primary, #00f0ff);
-}
-
-.command-platform.windows {
-  background: rgba(0, 212, 170, 0.1);
-  color: #00d4aa;
-}
-
-.command-platform.linux {
-  background: rgba(255, 199, 0, 0.1);
-  color: #ffc700;
-}
-
-.command-code {
-  background: var(--color-bg-input, #0d0d12);
-  border-radius: 4px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
+.message-body :deep(pre) {
+  margin: 8px 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
   overflow-x: auto;
 }
 
-.command-code code {
-  font-family: 'SF Mono', Menlo, Monaco, monospace;
-  font-size: 13px;
-  color: var(--color-brand-primary, #00f0ff);
-  white-space: pre-wrap;
-  word-break: break-all;
+.message-body :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  color: var(--color-on-surface, #f6f6fc);
 }
 
-.command-desc {
-  font-size: 12px;
-  color: var(--color-text-tertiary, #6b6b78);
-  margin-bottom: 12px;
+.message-body :deep(ul),
+.message-body :deep(ol) {
+  margin: 8px 0;
+  padding-left: 20px;
 }
 
-.copy-btn {
+.message-body :deep(li) {
+  margin: 4px 0;
+}
+
+.message-body :deep(a) {
+  color: var(--color-primary, #b79fff);
+  text-decoration: none;
+}
+
+.message-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.message-body :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.message-body :deep(th),
+.message-body :deep(td) {
+  padding: 6px 10px;
+  border: 1px solid rgba(70, 72, 77, 0.3);
+  text-align: left;
+}
+
+.message-body :deep(th) {
+  background: rgba(29, 32, 37, 0.8);
+  font-weight: 600;
+}
+
+.message-body :deep(blockquote) {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--color-primary, #b79fff);
+  background: rgba(183, 159, 255, 0.05);
+  color: var(--color-on-surface-variant, #aaabb0);
+}
+
+/* ========== Input Area ========== */
+.ai-input-area {
+  padding: 12px 16px;
+  background: rgba(17, 19, 24, 0.6);
+  border-top: 1px solid rgba(70, 72, 77, 0.1);
+  box-sizing: border-box;
+ 
+}
+
+.input-toolbar {
+  position: relative;
+  margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 模型选择器 */
+.model-selector {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: transparent;
-  border: 1px solid var(--color-border-default, #2a2a35);
-  border-radius: 4px;
-  color: var(--color-text-tertiary, #6b6b78);
-  font-size: 12px;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(29, 32, 37, 0.6);
+  border: 1px solid rgba(70, 72, 77, 0.2);
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.copy-btn:hover {
-  background: var(--color-bg-active, #2a2a35);
-  color: var(--color-text-input, #e0e0e0);
+.model-selector:hover {
+  border-color: rgba(183, 159, 255, 0.3);
 }
 
-.copy-btn.copied {
-  background: rgba(0, 212, 170, 0.1);
-  border-color: #00d4aa;
-  color: #00d4aa;
-}
-
-/* 空状态 - 已改用 EmptyState 组件 */
-
-/* 设置弹窗 */
-.settings-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+.model-icon-wrapper {
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: var(--z-modal-overlay, 3001);
-  backdrop-filter: blur(4px);
+  background: rgba(183, 159, 255, 0.1);
+  border-radius: 6px;
+  color: var(--color-primary, #b79fff);
 }
 
-.modal-content {
-  width: 400px;
-  max-width: 90vw;
-  background: var(--color-bg-surface, #1a1a24);
-  border: 1px solid var(--color-border-default, #2a2a35);
-  border-radius: 12px;
+.model-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.model-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--color-on-surface-variant, #aaabb0);
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
-.modal-header {
+.dropdown-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-on-surface-variant, #aaabb0);
+}
+
+/* 模型菜单 */
+.model-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: rgba(29, 32, 37, 0.98);
+  border: 1px solid rgba(70, 72, 77, 0.2);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.model-option {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.model-option:hover {
+  background: rgba(183, 159, 255, 0.1);
+}
+
+.model-option.active {
+  background: rgba(183, 159, 255, 0.15);
+}
+
+.model-option-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border-input, #23232c);
-}
-
-.modal-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text-input, #e0e0e0);
-}
-
-.modal-header .close-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-tertiary, #6b6b78);
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.modal-header .close-btn:hover {
-  color: var(--color-text-input, #e0e0e0);
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  color: var(--color-text-secondary, #9b9ba5);
-  margin-bottom: 8px;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--color-bg-input, #0d0d12);
-  border: 1px solid var(--color-border-input, #23232c);
-  border-radius: 6px;
-  color: var(--color-text-input, #e0e0e0);
-  font-size: 14px;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: var(--color-brand-primary, #00f0ff);
-}
-
-.form-group input::placeholder {
-  color: var(--color-text-disabled, #5a5a68);
-}
-
-.provider-tabs {
-  display: flex;
   gap: 8px;
 }
 
-.provider-tab {
-  flex: 1;
-  padding: 10px;
-  background: var(--color-bg-input, #0d0d12);
-  border: 1px solid var(--color-border-input, #23232c);
-  border-radius: 6px;
-  color: var(--color-text-tertiary, #6b6b78);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.provider-tab:hover {
-  background: var(--color-bg-hover, #23232c);
-}
-
-.provider-tab.active {
-  background: rgba(0, 240, 255, 0.1);
-  border-color: var(--color-brand-primary, #00f0ff);
-  color: var(--color-brand-primary, #00f0ff);
-}
-
-.modal-footer {
+.model-info {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--color-border-input, #23232c);
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.btn {
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 14px;
+.model-option-name {
+  font-size: 12px;
   font-weight: 500;
-  cursor: pointer;
+  color: var(--color-on-surface, #f6f6fc);
+}
+
+.model-option.active .model-option-name {
+  color: var(--color-primary, #b79fff);
+}
+
+.model-option-id {
+  font-size: 10px;
+  color: var(--color-on-surface-variant, #aaabb0);
+  opacity: 0.7;
+}
+
+.model-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.model-badge.openai {
+  background: rgba(16, 163, 127, 0.2);
+  color: #10a37f;
+}
+
+.model-badge.claude {
+  background: rgba(215, 168, 116, 0.2);
+  color: #d7a874;
+}
+
+.model-badge.ollama {
+  background: rgba(255, 134, 195, 0.2);
+  color: #ff86c3;
+}
+
+.model-badge.custom {
+  background: rgba(45, 183, 242, 0.2);
+  color: #2db7f2;
+}
+
+.model-option-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--color-on-surface-variant, #aaabb0);
+  gap: 8px;
+}
+
+.model-option-empty svg {
+  width: 24px;
+  height: 24px;
+  opacity: 0.5;
+}
+
+.model-option-empty span {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 输入框 */
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.message-input {
+  flex: 1;
+  min-height: 44px;
+  max-height: 200px;
+  padding: 12px 14px;
+  background: rgba(29, 32, 37, 0.6);
+  border: 1px solid rgba(70, 72, 77, 0.2);
+  border-radius: 12px;
+  color: var(--color-on-surface, #f6f6fc);
+  font-size: 13px;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  resize: none;
+  outline: none;
   transition: all 0.2s ease;
+  line-height: 1.5;
+  min-width: 0;
 }
 
-.btn.secondary {
-  background: transparent;
-  border: 1px solid var(--color-border-default, #2a2a35);
-  color: var(--color-text-secondary, #9b9ba5);
+.message-input:focus {
+  border-color: rgba(183, 159, 255, 0.4);
+  box-shadow: 0 0 0 1px rgba(183, 159, 255, 0.1);
 }
 
-.btn.secondary:hover {
-  background: var(--color-bg-hover, #23232c);
-  color: var(--color-text-input, #e0e0e0);
+.message-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.btn.primary {
-  background: linear-gradient(135deg, var(--color-brand-primary) 0%, #00d4ff 100%);
+.message-input::placeholder {
+  color: var(--color-on-surface-variant, #aaabb0);
+  opacity: 0.5;
+}
+
+.send-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary, #b79fff) 0%, var(--color-primary-dim, #a88cfb) 100%);
   border: none;
-  color: var(--color-bg-base, #0f0f14);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--color-on-primary, #361083);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.btn.primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--color-brand-primary-rgb), 0.3);
+.send-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: scale(1.02);
+}
+
+.send-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.send-btn.loading {
+  opacity: 0.8;
+}
+
+.send-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ========== Scrollbar ========== */
+.ai-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ai-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-messages::-webkit-scrollbar-thumb {
+  background: rgba(70, 72, 77, 0.4);
+  border-radius: 2px;
+}
+
+.ai-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(70, 72, 77, 0.6);
+}
+
+.model-menu::-webkit-scrollbar {
+  width: 3px;
+}
+
+.model-menu::-webkit-scrollbar-thumb {
+  background: rgba(70, 72, 77, 0.4);
+  border-radius: 2px;
 }
 </style>

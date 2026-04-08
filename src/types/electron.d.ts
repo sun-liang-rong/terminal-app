@@ -110,9 +110,29 @@ declare global {
       getAISettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
       saveAISettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
 
+      // AI 对话流相关
+      aiChatStream: (request: {
+        provider: string
+        apiKey?: string
+        baseUrl?: string
+        model: string
+        messages: Array<{ role: string; content: string }>
+      }) => Promise<{ success: boolean; streamId?: string; error?: string }>
+      onAIStreamData: (callback: (data: { streamId: string; data?: string; done?: boolean; error?: string }) => void) => number
+      removeAIStreamListener: (id: number) => void
+      aiAbortStream: (streamId: string) => Promise<{ success: boolean; error?: string }>
+
       // 终端设置存储相关
       getTerminalSettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
       saveTerminalSettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
+
+      // 窗口控制相关
+      windowMinimize: () => Promise<{ success: boolean; error?: string }>
+      windowMaximize: () => Promise<{ success: boolean; error?: string }>
+      windowClose: () => Promise<{ success: boolean; error?: string }>
+      isMaximized: () => Promise<boolean>
+      onWindowStateChange: (callback: (state: { maximized: boolean }) => void) => number
+      removeWindowStateListener: (id: number) => void
     }
   }
 }

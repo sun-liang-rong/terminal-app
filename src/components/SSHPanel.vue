@@ -778,7 +778,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: linear-gradient(180deg, #0f0f16 0%, #0a0a0f 100%);
+  background: var(--color-bg-base, #1c1c1e);
   color: #e0e0e0;
   position: relative;
 }
@@ -790,7 +790,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(10, 10, 15, 0.95);
+  background: rgba(28, 28, 30, 0.95);
   backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
@@ -808,11 +808,11 @@ onMounted(() => {
 /* Skeleton 终端预览 */
 .skeleton-terminal {
   width: 320px;
-  background: #0f0f14;
+  background: var(--color-bg-surface, #2c2c2e);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: var(--radius-lg, 14px);
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.25));
 }
 
 .skeleton-header {
@@ -862,7 +862,7 @@ onMounted(() => {
 }
 
 .skeleton-line.highlight {
-  background: linear-gradient(90deg, rgba(0, 240, 255, 0.05) 0%, rgba(0, 240, 255, 0.15) 50%, rgba(0, 240, 255, 0.05) 100%);
+  background: linear-gradient(90deg, rgba(10, 132, 255, 0.05) 0%, rgba(10, 132, 255, 0.15) 50%, rgba(10, 132, 255, 0.05) 100%);
   background-size: 200% 100%;
 }
 
@@ -891,7 +891,7 @@ onMounted(() => {
   position: absolute;
   width: 100%;
   height: 100%;
-  border: 2px solid rgba(0, 240, 255, 0.3);
+  border: 2px solid rgba(10, 132, 255, 0.3);
   border-radius: 50%;
   animation: pulse-ring 2s ease-out infinite;
 }
@@ -914,9 +914,8 @@ onMounted(() => {
 .status-dot {
   width: 16px;
   height: 16px;
-  background: linear-gradient(135deg, #00f0ff, #3b82f6);
+  background: var(--color-primary, #b79fff);
   border-radius: 50%;
-  box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
   animation: dot-pulse 1s ease-in-out infinite;
 }
 
@@ -940,7 +939,7 @@ onMounted(() => {
 
 .status-host {
   font-size: 15px;
-  color: #00f0ff;
+  color: var(--color-primary, #b79fff);
   font-weight: 500;
 }
 
@@ -956,7 +955,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  background: linear-gradient(180deg, #12121a 0%, #0f0f14 100%);
+  background: var(--color-bg-surface, #2c2c2e);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   gap: 16px;
 }
@@ -975,33 +974,30 @@ onMounted(() => {
   min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 10px);
   color: #8b8b9a;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.5px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .toolbar-btn:hover {
   background: rgba(255, 255, 255, 0.05);
   color: #e5e5e7;
   border-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
 }
 
 .toolbar-btn.primary {
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.18) 0%, rgba(59, 130, 246, 0.1) 100%);
-  border-color: rgba(0, 240, 255, 0.25);
-  color: #00f0ff;
-  box-shadow: 0 4px 16px rgba(0, 240, 255, 0.12);
+  background: rgba(10, 132, 255, 0.1);
+  border-color: rgba(10, 132, 255, 0.2);
+  color: var(--color-primary, #b79fff);
 }
 
 .toolbar-btn.primary:hover {
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.22) 0%, rgba(59, 130, 246, 0.14) 100%);
-  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.18);
-  transform: translateY(-2px);
+  background: rgba(10, 132, 255, 0.15);
+  border-color: rgba(10, 132, 255, 0.3);
 }
 
 .toolbar-right {
@@ -1016,15 +1012,14 @@ onMounted(() => {
   padding: 10px 16px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 10px);
   width: 260px;
-  transition: all 0.25s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .search-box:focus-within {
-  border-color: rgba(0, 240, 255, 0.25);
+  border-color: rgba(10, 132, 255, 0.25);
   background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.08);
 }
 
 .search-box i {
@@ -1034,7 +1029,7 @@ onMounted(() => {
 }
 
 .search-box:focus-within i {
-  color: #00f0ff;
+  color: var(--color-primary, #b79fff);
 }
 
 .search-box input {
@@ -1066,7 +1061,7 @@ onMounted(() => {
 }
 
 .hosts-section::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(0, 240, 255, 0.2), rgba(59, 130, 246, 0.2));
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
@@ -1112,9 +1107,9 @@ onMounted(() => {
   padding: 18px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  border-radius: var(--radius-lg, 14px);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   position: relative;
   overflow: hidden;
 }
@@ -1126,17 +1121,17 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.06) 0%, rgba(59, 130, 246, 0.03) 100%);
+  background: rgba(10, 132, 255, 0.05);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 150ms cubic-bezier(0.25, 1, 0.5, 1);
   pointer-events: none;
 }
 
 .host-card:hover {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(0, 240, 255, 0.15);
+  border-color: rgba(10, 132, 255, 0.2);
   transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 240, 255, 0.08);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.2));
 }
 
 .host-card:hover::before {
@@ -1149,16 +1144,15 @@ onMounted(() => {
   justify-content: center;
   width: 52px;
   height: 52px;
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.18) 0%, rgba(59, 130, 246, 0.1) 100%);
-  border-radius: 14px;
+  background: rgba(10, 132, 255, 0.1);
+  border-radius: var(--radius-md, 10px);
   flex-shrink: 0;
-  border: 1px solid rgba(0, 240, 255, 0.15);
+  border: 1px solid rgba(10, 132, 255, 0.15);
 }
 
 .host-icon i {
   font-size: 26px;
-  color: #00f0ff;
-  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4));
+  color: var(--color-primary, #b79fff);
 }
 
 .host-info {
@@ -1186,7 +1180,7 @@ onMounted(() => {
   display: flex;
   gap: 6px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .host-card:hover .host-actions {
@@ -1201,17 +1195,16 @@ onMounted(() => {
   min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
+  border-radius: var(--radius-md, 10px);
   color: #8b8b9a;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .action-btn:hover {
-  background: rgba(0, 240, 255, 0.1);
-  border-color: rgba(0, 240, 255, 0.2);
-  color: #00f0ff;
-  transform: scale(1.05);
+  background: rgba(10, 132, 255, 0.1);
+  border-color: rgba(10, 132, 255, 0.2);
+  color: var(--color-primary, #b79fff);
 }
 
 /* 添加卡片 */
@@ -1225,8 +1218,8 @@ onMounted(() => {
 }
 
 .add-card:hover {
-  background: rgba(0, 240, 255, 0.05);
-  border-color: rgba(0, 240, 255, 0.3);
+  background: rgba(10, 132, 255, 0.05);
+  border-color: rgba(10, 132, 255, 0.3);
 }
 
 .add-icon {
@@ -1237,31 +1230,30 @@ onMounted(() => {
   height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  border-radius: var(--radius-md, 10px);
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .add-card:hover .add-icon {
-  background: rgba(0, 240, 255, 0.1);
-  border-color: rgba(0, 240, 255, 0.25);
+  background: rgba(10, 132, 255, 0.1);
+  border-color: rgba(10, 132, 255, 0.25);
 }
 
 .add-icon i {
   font-size: 22px;
   color: #8b8b9a;
-  transition: all 0.3s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .add-card:hover .add-icon i {
-  color: #00f0ff;
-  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4));
+  color: var(--color-primary, #b79fff);
 }
 
 .add-text {
   font-size: 13px;
   color: #6b6b78;
   font-weight: 500;
-  transition: color 0.3s ease;
+  transition: color 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .add-card:hover .add-text {
@@ -1281,7 +1273,7 @@ onMounted(() => {
   justify-content: center;
   z-index: var(--z-modal-overlay, 3001);
   backdrop-filter: blur(8px);
-  animation: fadeIn 0.25s ease;
+  animation: fadeIn 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 @keyframes fadeIn {
@@ -1293,12 +1285,12 @@ onMounted(() => {
   width: 520px;
   max-width: 90vw;
   max-height: 90vh;
-  background: linear-gradient(180deg, #151520 0%, #0f0f16 100%);
+  background: var(--color-bg-surface, #2c2c2e);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  border-radius: var(--radius-xl, 20px);
   overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0, 240, 255, 0.1), 0 0 0 1px rgba(0, 240, 255, 0.05);
-  animation: slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-xl, 0 16px 48px rgba(0, 0, 0, 0.3));
+  animation: slideUp 250ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 @keyframes slideUp {
@@ -1335,17 +1327,16 @@ onMounted(() => {
   min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 10px);
   color: #8b8b9a;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .close-btn:hover {
-  background: rgba(255, 95, 87, 0.12);
-  border-color: rgba(255, 95, 87, 0.25);
-  color: #ff5f57;
-  transform: scale(1.05);
+  background: rgba(255, 69, 58, 0.12);
+  border-color: rgba(255, 69, 58, 0.25);
+  color: var(--color-error, #ff453a);
 }
 
 .modal-body {
@@ -1402,17 +1393,16 @@ onMounted(() => {
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 10px);
   color: #e0e0e0;
   font-size: 14px;
-  transition: all 0.25s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: rgba(0, 240, 255, 0.3);
+  border-color: rgba(10, 132, 255, 0.3);
   background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.1);
 }
 
 .form-group input::placeholder {
@@ -1482,8 +1472,8 @@ onMounted(() => {
 }
 
 .toggle-password:hover {
-  color: #00f0ff;
-  background: rgba(0, 240, 255, 0.1);
+  color: var(--color-primary, #b79fff);
+  background: rgba(10, 132, 255, 0.1);
 }
 
 /* 密码强度指示器 */
@@ -1541,12 +1531,12 @@ onMounted(() => {
   min-height: 44px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 10px);
   color: #8b8b9a;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .auth-tab:hover {
@@ -1555,10 +1545,9 @@ onMounted(() => {
 }
 
 .auth-tab.active {
-  background: rgba(0, 240, 255, 0.12);
-  border-color: rgba(0, 240, 255, 0.3);
-  color: #00f0ff;
-  box-shadow: 0 4px 12px rgba(0, 240, 255, 0.1);
+  background: rgba(10, 132, 255, 0.12);
+  border-color: rgba(10, 132, 255, 0.3);
+  color: var(--color-primary, #b79fff);
 }
 
 /* 文件输入 */
@@ -1576,19 +1565,19 @@ onMounted(() => {
   min-height: 44px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 10px);
   color: #8b8b9a;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   white-space: nowrap;
 }
 
 .file-btn:hover {
-  background: rgba(0, 240, 255, 0.1);
-  border-color: rgba(0, 240, 255, 0.25);
-  color: #00f0ff;
+  background: rgba(10, 132, 255, 0.1);
+  border-color: rgba(10, 132, 255, 0.25);
+  color: var(--color-primary, #b79fff);
 }
 
 /* 复选框 */
@@ -1608,14 +1597,14 @@ onMounted(() => {
   height: 20px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  border-radius: var(--radius-sm, 6px);
   position: relative;
-  transition: all 0.25s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .checkbox-label input:checked + .checkbox-custom {
-  background: rgba(0, 240, 255, 0.15);
-  border-color: rgba(0, 240, 255, 0.4);
+  background: rgba(10, 132, 255, 0.15);
+  border-color: rgba(10, 132, 255, 0.4);
 }
 
 .checkbox-label input:checked + .checkbox-custom::after {
@@ -1625,7 +1614,7 @@ onMounted(() => {
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 12px;
-  color: #00f0ff;
+  color: var(--color-primary, #b79fff);
 }
 
 .checkbox-label span:last-child {
@@ -1646,11 +1635,11 @@ onMounted(() => {
 .btn {
   padding: 14px 24px;
   min-height: 44px;
-  border-radius: 10px;
+  border-radius: var(--radius-md, 10px);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   letter-spacing: 0.3px;
 }
 
@@ -1667,16 +1656,14 @@ onMounted(() => {
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(59, 130, 246, 0.12) 100%);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  color: #00f0ff;
-  box-shadow: 0 4px 16px rgba(0, 240, 255, 0.15);
+  background: rgba(10, 132, 255, 0.15);
+  border: 1px solid rgba(10, 132, 255, 0.3);
+  color: var(--color-primary, #b79fff);
 }
 
 .btn.primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25) 0%, rgba(59, 130, 246, 0.16) 100%);
-  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.2);
-  transform: translateY(-1px);
+  background: rgba(10, 132, 255, 0.2);
+  border-color: rgba(10, 132, 255, 0.4);
 }
 
 .btn:disabled {
@@ -1698,7 +1685,7 @@ onMounted(() => {
 /* 过渡动画 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .fade-enter-from,

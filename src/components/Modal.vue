@@ -149,12 +149,12 @@ defineExpose({ show, hide })
 .modal-container {
   min-width: 360px;
   max-width: 480px;
-  background: linear-gradient(180deg, var(--color-bg-elevated) 0%, var(--color-bg-surface) 100%);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-xl);
+  background: var(--color-bg-surface, #2c2c2e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl, 20px);
   padding: var(--space-8);
   text-align: center;
-  box-shadow: var(--shadow-xl), 0 0 80px rgba(0, 240, 255, 0.08);
+  box-shadow: var(--shadow-xl, 0 16px 48px rgba(0, 0, 0, 0.3));
 }
 
 /* 图标区域 */
@@ -170,33 +170,28 @@ defineExpose({ show, hide })
 }
 
 .modal-icon.info {
-  background: rgba(96, 165, 250, 0.15);
-  color: #60a5fa;
-  box-shadow: 0 0 24px rgba(96, 165, 250, 0.2);
+  background: rgba(183, 159, 255, 0.15);
+  color: var(--color-primary, #b79fff);
 }
 
 .modal-icon.warning {
-  background: rgba(250, 204, 21, 0.15);
-  color: #facc15;
-  box-shadow: 0 0 24px rgba(250, 204, 21, 0.2);
+  background: rgba(255, 134, 195, 0.15);
+  color: var(--color-tertiary, #ff86c3);
 }
 
 .modal-icon.error {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  box-shadow: 0 0 24px rgba(239, 68, 68, 0.2);
+  background: rgba(255, 110, 132, 0.15);
+  color: var(--color-error, #ff6e84);
 }
 
 .modal-icon.success {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.2);
+  background: rgba(45, 183, 242, 0.15);
+  color: var(--color-secondary, #2db7f2);
 }
 
 .modal-icon.confirm {
-  background: rgba(0, 240, 255, 0.15);
-  color: var(--color-brand-primary);
-  box-shadow: 0 0 24px rgba(0, 240, 255, 0.2);
+  background: rgba(183, 159, 255, 0.15);
+  color: var(--color-primary, #b79fff);
 }
 
 /* 标题 */
@@ -230,53 +225,49 @@ defineExpose({ show, hide })
 .modal-btn {
   min-width: 100px;
   padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md, 10px);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   border: none;
 }
 
 .modal-btn.secondary {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-default);
-  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary, #a1a1a6);
 }
 
 .modal-btn.secondary:hover {
-  background: var(--color-bg-overlay);
-  color: var(--color-text-primary);
-  border-color: var(--color-border-emphasis);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary, #f5f5f7);
 }
 
 .modal-btn.primary {
-  background: var(--color-brand-primary);
-  color: var(--color-bg-base);
-  box-shadow: var(--shadow-brand);
+  background: var(--color-primary, #b79fff);
+  color: var(--color-on-primary, #361083);
 }
 
 .modal-btn.primary:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-brand-lg);
+  background: var(--color-primary-dim, #a88cfb);
 }
 
 .modal-btn.danger {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ef4444;
+  background: rgba(255, 110, 132, 0.15);
+  border: 1px solid rgba(255, 110, 132, 0.3);
+  color: var(--color-error, #ff6e84);
 }
 
 .modal-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(255, 110, 132, 0.25);
+  border-color: rgba(255, 110, 132, 0.4);
 }
 
 /* 动画 */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
-  transition: opacity 0.25s ease;
+  transition: opacity 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .modal-fade-enter-from,
@@ -286,7 +277,7 @@ defineExpose({ show, hide })
 
 .modal-slide-enter-active,
 .modal-slide-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 200ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .modal-slide-enter-from,

@@ -9,7 +9,7 @@ console.log('[Preload] contextBridge available:', !!contextBridge)
 
 // 存储每个终端的监听器
 interface ListenerInfo {
-  type: 'data' | 'exit' | 'ssh-data' | 'ssh-close'
+  type: 'data' | 'exit' | 'ssh-data' | 'ssh-close' | 'window-state'
   handler: (event: Electron.IpcRendererEvent, data: unknown) => void
 }
 
@@ -61,9 +61,24 @@ interface ElectronAPI {
   // AI 设置存储相关
   getAISettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
   saveAISettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
-  // 终端设置存储相关
-  getTerminalSettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
-  saveTerminalSettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
+  // AI 对话流
+  aiChatStream: (request: {
+    provider: string
+    apiKey?: string
+    baseUrl?: string
+    model: string
+    messages: Array<{ role: string; content: string }>
+  }) => Promise<{ success: boolean; streamId?: string; error?: string }>
+  onAIStreamData: (callback: (data: { streamId: string; data?: string; done?: boolean; error?: string }) => void) => number
+  aiAbortStream: (streamId: string) => Promise<{ success: boolean; error?: string }>
+  // 窗口控制相关
+  windowMinimize: () => Promise<{ success: boolean; error?: string }>
+  windowMaximize: () => Promise<{ success: boolean; error?: string }>
+  windowClose: () => Promise<{ success: boolean; error?: string }>
+  isMaximized: () => Promise<boolean>
+  // 窗口状态变化监听
+  onWindowStateChange: (callback: (state: { maximized: boolean }) => void) => number
+  removeWindowStateListener: (id: number) => void
 }
 
 // 暴露安全的 API 到渲染进程
@@ -156,9 +171,48 @@ const electronAPI: ElectronAPI = {
   getAISettings: () => ipcRenderer.invoke('get-ai-settings'),
   saveAISettings: (settings: unknown) => ipcRenderer.invoke('save-ai-settings', settings),
 
+  // AI 对话流相关
+  aiChatStream: (request) => ipcRenderer.invoke('ai-chat-stream', request),
+  onAIStreamData: (callback): number => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { streamId: string; data?: string; done?: boolean; error?: string })
+    ipcRenderer.on('ai-stream-data', handler)
+    const id = Date.now() + 5
+    listeners.set(id, { type: 'ai-stream' as const, handler })
+    return id
+  },
+  removeAIStreamListener: (id: number): void => {
+    const info = listeners.get(id)
+    if (info && info.type === 'ai-stream') {
+      ipcRenderer.removeListener('ai-stream-data', info.handler)
+      listeners.delete(id)
+    }
+  },
+  aiAbortStream: (streamId: string) => ipcRenderer.invoke('ai-abort-stream', streamId),
+
   // 终端设置存储相关
   getTerminalSettings: () => ipcRenderer.invoke('get-terminal-settings'),
-  saveTerminalSettings: (settings: unknown) => ipcRenderer.invoke('save-terminal-settings', settings)
+  saveTerminalSettings: (settings: unknown) => ipcRenderer.invoke('save-terminal-settings', settings),
+
+  // 窗口控制相关
+  windowMinimize: () => ipcRenderer.invoke('window-minimize'),
+  windowMaximize: () => ipcRenderer.invoke('window-maximize'),
+  windowClose: () => ipcRenderer.invoke('window-close'),
+  isMaximized: () => ipcRenderer.invoke('is-maximized'),
+  // 窗口状态变化监听
+  onWindowStateChange: (callback: (state: { maximized: boolean }) => void): number => {
+    const handler = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state as { maximized: boolean })
+    ipcRenderer.on('window-state-change', handler)
+    const id = Date.now() + 4
+    listeners.set(id, { type: 'window-state' as const, handler })
+    return id
+  },
+  removeWindowStateListener: (id: number): void => {
+    const info = listeners.get(id)
+    if (info && info.type === 'window-state') {
+      ipcRenderer.removeListener('window-state-change', info.handler)
+      listeners.delete(id)
+    }
+  }
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

@@ -1,130 +1,124 @@
 <template>
-  <div class="topbar">
-    <!-- 左侧：空白区域（macOS 窗口控制按钮区域） -->
+  <header class="topbar">
+    <!-- 左侧：留白（窗口控制区域） -->
     <div class="topbar-left"></div>
-
-    <!-- 中央：搜索入口 -->
-    <div class="topbar-center">
-      <div class="search-container" @click="openCommandPalette">
-        <div class="search-box">
-          <div class="search-icon-wrapper">
-            <i class="iconfont icon-search"></i>
-          </div>
-          <span class="search-placeholder">命令、主机、AI...</span>
-          <kbd class="search-shortcut">⌘K</kbd>
-        </div>
-      </div>
-    </div>
 
     <!-- 右侧：工具栏 -->
     <div class="topbar-right">
-      <button class="action-btn primary" @click="emit('new-session')" title="新建会话">
-        <i class="iconfont icon-plus"></i>
-      </button>
-      <button class="action-btn" @click="showThemeMenu = !showThemeMenu" title="主题">
-        <i class="iconfont icon-theme"></i>
+      <!-- 切换侧边栏按钮 -->
+      <button class="tool-btn" @click="toggleSidebar" title="切换左侧边栏">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
+        </svg>
       </button>
 
-      <!-- 主题菜单 -->
-      <Transition name="menu-fade">
-        <div class="theme-menu" v-show="showThemeMenu">
-          <div class="theme-menu-header">
-            <span>主题</span>
-          </div>
-          <div class="theme-grid">
-            <div
-              class="theme-card"
-              v-for="theme in themeList"
-              :key="theme.key"
-              :class="{ active: currentTheme === theme.key }"
-              @click="selectTheme(theme.key)"
-            >
-              <span class="theme-preview" :style="getThemePreviewStyle(theme.key)"></span>
-              <span class="theme-name">{{ theme.name }}</span>
-            </div>
-          </div>
+      <!-- 切换AI助手按钮 -->
+      <button class="tool-btn" @click="toggleAiPanel" title="切换AI助手">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/>
+        </svg>
+      </button>
+
+      <!-- 设置按钮 -->
+      <button class="tool-btn" @click="emit('open-settings')" title="设置">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L4.09 8.77c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+      </button>
+
+      <!-- 用户头像 -->
+      <div class="user-avatar">
+        <div class="avatar-placeholder">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
         </div>
-      </Transition>
+      </div>
 
-      <button class="action-btn" @click="emit('open-settings')" title="设置">
-        <i class="iconfont icon-settings"></i>
-      </button>
-
-      <button class="action-btn" @click="toggleFullscreen" title="全屏">
-        <i class="iconfont" :class="isFullscreen ? 'icon-exit-fullscreen' : 'icon-fullscreen'"></i>
-      </button>
+      <!-- 窗口控制按钮 -->
+      <div class="window-controls">
+        <button class="window-btn minimize" @click="minimizeWindow" title="最小化">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 14H4v-2h16v2z"/>
+          </svg>
+        </button>
+        <button class="window-btn maximize" @click="maximizeWindow" title="最大化/还原">
+          <svg v-if="isMaximized" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+          </svg>
+        </button>
+        <button class="window-btn close" @click="closeWindow" title="关闭">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
+        </button>
+      </div>
     </div>
-  </div>
+  </header>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { getThemeList, setTheme } from '../utils/settingsStore'
-import { settingsState } from '../utils/settingsStore'
-import { terminalThemes, ThemeKey } from '../utils/themes'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { toggleSidebarCollapsed, toggleAssistantPanel } from '../utils/layoutStore'
 
-const emit = defineEmits(['open-settings', 'open-palette', 'new-session'])
+const emit = defineEmits(['open-settings', 'open-palette', 'new-session', 'switch-tab'])
 
-const showThemeMenu = ref(false)
-const isFullscreen = ref(false)
-const themeList = getThemeList()
+// 窗口最大化状态
+const isMaximized = ref(false)
+let stateListenerId: number | null = null
 
-// 使用响应式状态获取当前主题
-const currentTheme = computed(() => settingsState.theme)
-
-// 打开命令面板
-const openCommandPalette = () => {
-  emit('open-palette')
+// 切换侧边栏
+const toggleSidebar = () => {
+  toggleSidebarCollapsed()
 }
 
-// 切换全屏
-const toggleFullscreen = () => {
-  if (document.fullscreenElement) {
-    document.exitFullscreen()
-    isFullscreen.value = false
-  } else {
-    document.documentElement.requestFullscreen()
-    isFullscreen.value = true
+// 切换AI面板
+const toggleAiPanel = () => {
+  toggleAssistantPanel()
+}
+
+// 窗口控制函数
+const minimizeWindow = async () => {
+  if (window.electronAPI?.windowMinimize) {
+    await window.electronAPI.windowMinimize()
   }
 }
 
-// 获取主题预览样式
-const getThemePreviewStyle = (themeKey: string) => {
-  const theme = terminalThemes[themeKey as ThemeKey]
-  if (!theme) return {}
-  return {
-    background: `linear-gradient(135deg, ${theme.background} 0%, ${theme.black} 100%)`,
-    borderLeft: `3px solid ${theme.cyan}`,
-    boxShadow: `inset 0 0 0 1px ${theme.foreground}20`
+const maximizeWindow = async () => {
+  if (window.electronAPI?.windowMaximize) {
+    await window.electronAPI.windowMaximize()
   }
 }
 
-// 选择主题
-const selectTheme = (themeKey: string) => {
-  setTheme(themeKey)
-  showThemeMenu.value = false
-}
-
-// 点击外部关闭菜单
-const handleClickOutside = (e: MouseEvent) => {
-  if (!(e.target as HTMLElement).closest('.theme-menu') && !(e.target as HTMLElement).closest('.action-btn')) {
-    showThemeMenu.value = false
+const closeWindow = async () => {
+  if (window.electronAPI?.windowClose) {
+    await window.electronAPI.windowClose()
   }
 }
 
-// 监听全屏变化
-const handleFullscreenChange = () => {
-  isFullscreen.value = !!document.fullscreenElement
-}
+// 监听窗口状态变化
+onMounted(async () => {
+  // 获取初始窗口状态
+  if (window.electronAPI?.isMaximized) {
+    isMaximized.value = await window.electronAPI.isMaximized()
+  }
 
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-  document.addEventListener('fullscreenchange', handleFullscreenChange)
+  // 监听窗口状态变化
+  if (window.electronAPI?.onWindowStateChange) {
+    stateListenerId = window.electronAPI.onWindowStateChange((state) => {
+      isMaximized.value = state.maximized
+    })
+  }
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-  document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  // 移除监听器
+  if (stateListenerId !== null && window.electronAPI?.removeWindowStateListener) {
+    window.electronAPI.removeWindowStateListener(stateListenerId)
+  }
 })
 </script>
 
@@ -133,200 +127,125 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 52px;
-  background: transparent;
-  padding: 0 12px;
-  -webkit-app-region: drag;
+  height: 48px;
+  background: var(--color-surface, #0c0e12);
+  border-bottom: 1px solid rgba(70, 72, 77, 0.1);
+  padding: 0 16px;
+  z-index: 40;
 }
 
-/* ========== 三栏布局 ========== */
+/* ========== 左侧区域 ========== */
 .topbar-left {
   flex: 1;
   min-width: 80px;
-}
-
-.topbar-center {
+  -webkit-app-region: drag;
+  height: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
+/* ========== 右侧区域 ========== */
 .topbar-right {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
   -webkit-app-region: no-drag;
 }
 
-/* ========== 搜索框 ========== */
-.search-container {
-  -webkit-app-region: no-drag;
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-  width: 280px;
-  min-height: 44px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 0 12px;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.search-box:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(0, 240, 255, 0.12);
-}
-
-.search-icon-wrapper {
+/* 工具按钮 */
+.tool-btn {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  min-height: 20px;
-  background: rgba(0, 240, 255, 0.1);
-  border-radius: 5px;
-  flex-shrink: 0;
-}
-
-.search-icon-wrapper .iconfont {
-  font-size: 11px;
-  color: #00f0ff;
-}
-
-.search-placeholder {
-  flex: 1;
-  color: #5a5a68;
-  font-size: 12px;
-}
-
-.search-shortcut {
-  padding: 4px 8px;
-  background: rgba(0, 240, 255, 0.08);
-  border-radius: 4px;
-  font-size: 10px;
-  color: #00f0ff;
-  font-family: inherit;
-  font-weight: 500;
-  min-height: 20px;
-}
-
-/* ========== 操作按钮 ========== */
-.action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  color: #6b6b78;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #a0a0a8;
-}
-
-.action-btn.primary {
-  background: rgba(0, 240, 255, 0.1);
-  border-color: rgba(0, 240, 255, 0.15);
-  color: #00f0ff;
-}
-
-.action-btn.primary:hover {
-  background: rgba(0, 240, 255, 0.15);
-  border-color: rgba(0, 240, 255, 0.25);
-}
-
-.action-btn .iconfont {
-  font-size: 16px;
-}
-
-/* ========== 主题菜单 ========== */
-.theme-menu {
-  position: absolute;
-  top: 48px;
-  right: 0;
-  width: 200px;
-  background: #14141e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 8px;
-  z-index: var(--z-dropdown, 1000);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-.theme-menu-header {
-  font-size: 10px;
-  color: #6b6b78;
-  padding: 6px 8px;
-  letter-spacing: 0.3px;
-  margin-bottom: 6px;
-}
-
-.theme-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-}
-
-.theme-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px;
+  background: transparent;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-  min-height: 44px;
-}
-
-.theme-card:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.theme-card.active {
-  background: rgba(0, 240, 255, 0.08);
-  border-color: rgba(0, 240, 255, 0.15);
-}
-
-.theme-preview {
-  width: 100%;
-  height: 24px;
-  border-radius: 4px;
-}
-
-.theme-name {
-  font-size: 10px;
-  color: #8b8b9a;
-}
-
-.theme-card.active .theme-name {
-  color: #00f0ff;
-}
-
-/* ========== 动画 ========== */
-.menu-fade-enter-active,
-.menu-fade-leave-active {
+  color: var(--color-on-surface-variant, #aaabb0);
   transition: all 0.15s ease;
 }
 
-.menu-fade-enter-from,
-.menu-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
+.tool-btn:hover {
+  background: rgba(29, 32, 37, 0.6);
+  color: var(--color-on-surface, #f6f6fc);
+}
+
+.tool-btn:active {
+  transform: scale(0.95);
+}
+
+.tool-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* 用户头像 */
+.user-avatar {
+  margin-left: 8px;
+}
+
+.avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(29, 32, 37, 0.8);
+  border: 1px solid rgba(70, 72, 77, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-on-surface-variant, #aaabb0);
+  transition: all 0.15s ease;
+}
+
+.avatar-placeholder:hover {
+  border-color: rgba(183, 159, 255, 0.4);
+  color: var(--color-primary, #b79fff);
+}
+
+.avatar-placeholder svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ========== 窗口控制按钮 ========== */
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(70, 72, 77, 0.3);
+}
+
+.window-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-on-surface-variant, #aaabb0);
+  transition: all 0.15s ease;
+}
+
+.window-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-on-surface, #f6f6fc);
+}
+
+.window-btn.close:hover {
+  background: #e81123;
+  color: white;
+}
+
+.window-btn svg {
+  width: 14px;
+  height: 14px;
 }
 </style>

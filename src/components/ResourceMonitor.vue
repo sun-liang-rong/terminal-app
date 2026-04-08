@@ -340,13 +340,13 @@ onUnmounted(() => {
 }
 
 .resource-icon.memory {
-  background: rgba(139, 92, 246, 0.15);
-  color: #8b5cf6;
+  background: rgba(183, 159, 255, 0.15);
+  color: var(--color-primary, #b79fff);
 }
 
 .resource-icon.storage {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background: rgba(45, 183, 242, 0.15);
+  color: var(--color-secondary, #2db7f2);
 }
 
 .resource-icon .iconfont {
@@ -417,23 +417,23 @@ onUnmounted(() => {
 }
 
 .progress-fill.cpu {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  background: linear-gradient(90deg, var(--color-secondary, #2db7f2), var(--color-secondary-container, #00668a));
 }
 
 .progress-fill.memory {
-  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  background: linear-gradient(90deg, var(--color-primary, #b79fff), var(--color-primary-container, #ab8ffe));
 }
 
 .progress-fill.storage {
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: linear-gradient(90deg, var(--color-secondary, #2db7f2), var(--color-secondary-fixed, #9bdaff));
 }
 
 .progress-fill.warning {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  background: linear-gradient(90deg, var(--color-tertiary, #ff86c3), var(--color-tertiary-fixed, #ff8bc5));
 }
 
 .progress-fill.critical {
-  background: linear-gradient(90deg, #ef4444, #f87171);
+  background: linear-gradient(90deg, var(--color-error, #ff6e84), var(--color-error-dim, #d73357));
   animation: progress-pulse 1s ease-in-out infinite;
 }
 

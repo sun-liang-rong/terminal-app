@@ -64,6 +64,126 @@
         </div>
       </section>
 
+      <!-- AI 模型配置 -->
+      <section class="settings-section" v-show="matchesSearch('AI 模型 模型配置 GPT Claude')">
+        <div class="section-header">
+          <svg class="section-icon svg-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.98 11.62c.01-.09.02-.18.02-.28V7c0-1.1-.9-2-2-2h-4.52L12 2l-2 3H6c-1.1 0-2 .9-2 2v4c0 .1.01.19.02.28C2.55 12.1 1 13.88 1 16c0 2.76 2.24 5 5 5 1.36 0 2.6-.55 3.5-1.44.9.89 2.14 1.44 3.5 1.44s2.6-.55 3.5-1.44c.9.89 2.14 1.44 3.5 1.44 2.76 0 5-2.24 5-5 0-2.12-1.55-3.9-3.52-4.38zM6 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6 5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+          </svg>
+          <h3 class="section-title">AI 模型配置</h3>
+          <span class="section-badge">{{ aiModels.length }} 个模型</span>
+        </div>
+        <div class="section-desc">配置 AI 模型，支持 OpenAI、Claude、Ollama 等</div>
+
+        <!-- 模型列表 -->
+        <div class="models-list">
+          <div
+            v-for="model in aiModels"
+            :key="model.id"
+            class="model-card"
+            :class="{ active: currentModelId === model.id }"
+            @click="selectModel(model.id)"
+          >
+            <div class="model-info">
+              <span class="model-name">{{ model.name }}</span>
+              <span class="model-provider">{{ getProviderLabel(model.provider) }}</span>
+            </div>
+            <div class="model-actions">
+              <button class="model-btn edit" @click.stop="editModel(model)" title="编辑">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </button>
+              <button class="model-btn delete" @click.stop="deleteModel(model.id)" title="删除" v-if="aiModels.length > 1">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 添加模型按钮 -->
+        <button class="add-model-btn" @click="openAddModal">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          <span>添加模型</span>
+        </button>
+
+        <!-- 添加/编辑模型弹窗 -->
+        <div class="modal-overlay" v-if="showModelModal" @click.self="closeModelModal">
+          <div class="model-modal">
+            <div class="modal-header">
+              <h4>{{ editingModel ? '编辑模型' : '添加模型' }}</h4>
+              <button class="close-btn" @click="closeModelModal">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label>模型名称</label>
+                <input
+                  type="text"
+                  v-model="modelForm.name"
+                  placeholder="例如：GPT-4o"
+                />
+              </div>
+              <div class="form-group">
+                <label>提供商</label>
+                <div class="provider-options">
+                  <button
+                    v-for="provider in providerOptions"
+                    :key="provider.value"
+                    class="provider-btn"
+                    :class="{ active: modelForm.provider === provider.value }"
+                    @click="modelForm.provider = provider.value"
+                  >
+                    {{ provider.label }}
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>模型 ID</label>
+                <input
+                  type="text"
+                  v-model="modelForm.model"
+                  placeholder="例如：gpt-4o"
+                />
+                <div class="form-hint">
+                  <span v-if="modelForm.provider === 'openai'">常用：gpt-4o, gpt-4o-mini, gpt-4-turbo</span>
+                  <span v-else-if="modelForm.provider === 'claude'">常用：claude-3-5-sonnet-20241022, claude-3-opus-20240229</span>
+                  <span v-else-if="modelForm.provider === 'ollama'">常用：llama3, llama3.1, qwen2, mistral</span>
+                  <span v-else>请输入模型 ID</span>
+                </div>
+              </div>
+              <div class="form-group" v-if="modelForm.provider !== 'ollama'">
+                <label>API Key</label>
+                <input
+                  type="password"
+                  v-model="modelForm.apiKey"
+                  placeholder="sk-..."
+                />
+              </div>
+              <div class="form-group">
+                <label>Base URL (可选)</label>
+                <input
+                  type="text"
+                  v-model="modelForm.baseUrl"
+                  :placeholder="modelForm.provider === 'ollama' ? 'http://localhost:11434' : 'https://api.openai.com/v1'"
+                />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn secondary" @click="closeModelModal">取消</button>
+              <button class="btn primary" @click="saveModel">保存</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- 字体设置 -->
       <section class="settings-section" v-show="matchesSearch('字体 大小 类型')">
         <div class="section-header">
@@ -196,7 +316,7 @@
           <div class="color-picker-group">
             <input
               type="color"
-              :value="layoutState.customThemeColor || '#00f0ff'"
+              :value="layoutState.customThemeColor || '#b79fff'"
               @input="setCustomThemeColor($event.target.value)"
               class="color-picker"
             />
@@ -250,7 +370,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, reactive } from 'vue'
 import {
   initSettings,
   getSettings,
@@ -271,6 +391,17 @@ import {
   thresholds as perfThresholds,
   saveThresholds
 } from '../utils/performanceMonitor'
+import {
+  initAIModels,
+  aiModelsState,
+  currentModelId,
+  getAIModels,
+  addAIModel,
+  updateAIModel,
+  removeAIModel,
+  setCurrentModel,
+  type AIModelConfig
+} from '../utils/aiModelsStore'
 
 // 搜索
 const searchQuery = ref('')
@@ -307,11 +438,97 @@ const cursorStyleLabels: Record<string, string> = {
   bar: '竖线'
 }
 
+// AI 模型相关
+const aiModels = computed(() => aiModelsState.value)
+const showModelModal = ref(false)
+const editingModel = ref<AIModelConfig | null>(null)
+
+const modelForm = reactive({
+  name: '',
+  provider: 'openai' as const,
+  model: '',
+  apiKey: '',
+  baseUrl: ''
+})
+
+const providerOptions = [
+  { value: 'openai', label: 'OpenAI' },
+  { value: 'claude', label: 'Claude' },
+  { value: 'ollama', label: 'Ollama' },
+  { value: 'custom', label: '自定义' }
+]
+
+const getProviderLabel = (provider: string) => {
+  const labels: Record<string, string> = {
+    openai: 'OpenAI',
+    claude: 'Claude',
+    ollama: 'Ollama',
+    custom: '自定义'
+  }
+  return labels[provider] || provider
+}
+
+const openAddModal = () => {
+  editingModel.value = null
+  modelForm.name = ''
+  modelForm.provider = 'openai'
+  modelForm.model = ''
+  modelForm.apiKey = ''
+  modelForm.baseUrl = ''
+  showModelModal.value = true
+}
+
+const editModel = (model: AIModelConfig) => {
+  editingModel.value = model
+  modelForm.name = model.name
+  modelForm.provider = model.provider
+  modelForm.model = model.model
+  modelForm.apiKey = model.apiKey || ''
+  modelForm.baseUrl = model.baseUrl || ''
+  showModelModal.value = true
+}
+
+const closeModelModal = () => {
+  showModelModal.value = false
+  editingModel.value = null
+}
+
+const saveModel = () => {
+  if (!modelForm.name || !modelForm.model) return
+
+  const modelData = {
+    name: modelForm.name,
+    provider: modelForm.provider,
+    model: modelForm.model,
+    apiKey: modelForm.apiKey || undefined,
+    baseUrl: modelForm.baseUrl || undefined
+  }
+
+  if (editingModel.value) {
+    updateAIModel(editingModel.value.id, modelData)
+  } else {
+    addAIModel(modelData)
+  }
+
+  closeModelModal()
+}
+
+const deleteModel = (id: string) => {
+  if (aiModels.value.length > 1) {
+    removeAIModel(id)
+  }
+}
+
+const selectModel = (id: string) => {
+  setCurrentModel(id)
+}
+
 // 初始化设置
 onMounted(async () => {
   await initSettings()
   initLayout()
   loadThresholds()
+  initAIModels()
 })
 
 // 获取设置
@@ -405,7 +622,7 @@ const handleReset = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg-base, #0a0a0f);
+  background: var(--color-bg-base, #1c1c1e);
   overflow: hidden;
 }
 
@@ -433,14 +650,14 @@ const handleReset = () => {
   height: 32px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
+  border-radius: var(--radius-md, 10px);
   flex: 1;
   max-width: 280px;
-  transition: all 0.2s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .search-wrapper:focus-within {
-  border-color: rgba(0, 240, 255, 0.2);
+  border-color: rgba(183, 159, 255, 0.2);
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -502,7 +719,12 @@ const handleReset = () => {
 
 .section-icon {
   font-size: 16px;
-  color: #8b5cf6;
+  color: var(--color-primary, #b79fff);
+}
+
+.section-icon.svg-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .section-title {
@@ -538,9 +760,9 @@ const handleReset = () => {
   position: relative;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 10px);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   overflow: hidden;
 }
 
@@ -550,8 +772,7 @@ const handleReset = () => {
 }
 
 .theme-card.active {
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+  border-color: var(--color-primary, #b79fff);
 }
 
 .theme-preview {
@@ -609,7 +830,7 @@ const handleReset = () => {
   right: 8px;
   width: 22px;
   height: 22px;
-  background: rgba(139, 92, 246, 0.2);
+  background: var(--color-primary, #b79fff);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -618,7 +839,290 @@ const handleReset = () => {
 
 .theme-check .iconfont {
   font-size: 11px;
-  color: #a78bfa;
+  color: var(--color-on-primary, #361083);
+}
+
+/* ========== AI 模型配置 ========== */
+.models-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.model-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.model-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.model-card.active {
+  border-color: var(--color-primary, #b79fff);
+  background: rgba(183, 159, 255, 0.05);
+}
+
+.model-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.model-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, #e5e5e7);
+}
+
+.model-provider {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #8b8b9a);
+}
+
+.model-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.model-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-tertiary, #8b8b9a);
+  transition: all 0.15s ease;
+}
+
+.model-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary, #e5e5e7);
+}
+
+.model-btn.edit:hover {
+  color: var(--color-primary, #b79fff);
+}
+
+.model-btn.delete:hover {
+  color: #ff5f57;
+}
+
+.model-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.add-model-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: rgba(183, 159, 255, 0.05);
+  border: 1px dashed rgba(183, 159, 255, 0.3);
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--color-primary, #b79fff);
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.add-model-btn:hover {
+  background: rgba(183, 159, 255, 0.1);
+  border-color: rgba(183, 159, 255, 0.5);
+}
+
+.add-model-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ========== 模型弹窗 ========== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.model-modal {
+  width: 420px;
+  max-width: 90vw;
+  background: var(--color-bg-elevated, #14141e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-header h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary, #e5e5e7);
+  margin: 0;
+}
+
+.close-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-tertiary, #8b8b9a);
+  transition: all 0.15s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary, #e5e5e7);
+}
+
+.close-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #a1a1a6);
+}
+
+.form-group input {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: var(--color-text-primary, #e5e5e7);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.form-group input:focus {
+  border-color: var(--color-primary, #b79fff);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.form-group input::placeholder {
+  color: var(--color-text-disabled, #5a5a68);
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--color-text-secondary, #a1a1a6);
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.provider-options {
+  display: flex;
+  gap: 8px;
+}
+
+.provider-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: var(--color-text-tertiary, #8b8b9a);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.provider-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.provider-btn.active {
+  background: rgba(183, 159, 255, 0.1);
+  border-color: var(--color-primary, #b79fff);
+  color: var(--color-primary, #b79fff);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn.secondary {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary, #a1a1a6);
+}
+
+.btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary, #e5e5e7);
+}
+
+.btn.primary {
+  background: var(--color-primary, #b79fff);
+  border: none;
+  color: var(--color-on-primary, #361083);
+}
+
+.btn.primary:hover {
+  filter: brightness(1.1);
 }
 
 /* ========== 设置项 ========== */
@@ -664,15 +1168,14 @@ const handleReset = () => {
   appearance: none;
   width: 14px;
   height: 14px;
-  background: #8b5cf6;
+  background: var(--color-primary, #b79fff);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
 .range-value {
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-primary, #b79fff);
   font-weight: 500;
   min-width: 36px;
   text-align: right;
@@ -691,11 +1194,11 @@ const handleReset = () => {
   min-width: 140px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
+  border-radius: var(--radius-md, 10px);
   color: #e5e5e7;
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .custom-select-trigger.small {
@@ -706,7 +1209,7 @@ const handleReset = () => {
 
 .custom-select-trigger:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(139, 92, 246, 0.2);
+  border-color: rgba(183, 159, 255, 0.2);
 }
 
 .custom-select-trigger .iconfont {
@@ -722,10 +1225,10 @@ const handleReset = () => {
   min-width: 180px;
   background: var(--color-bg-elevated, #14141e);
   border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
-  border-radius: 8px;
+  border-radius: var(--radius-md, 10px);
   padding: 4px;
   z-index: var(--z-dropdown, 1000);
-  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.4));
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.25));
 }
 
 .custom-select-dropdown.small {
@@ -751,14 +1254,14 @@ const handleReset = () => {
 }
 
 .select-option.active {
-  background: rgba(139, 92, 246, 0.1);
-  color: #c4b5fd;
+  background: rgba(183, 159, 255, 0.1);
+  color: var(--color-primary, #b79fff);
 }
 
 .option-preview {
   font-size: 14px;
   font-weight: 600;
-  color: #a78bfa;
+  color: var(--color-primary, #b79fff);
   width: 24px;
   text-align: center;
 }
@@ -769,7 +1272,7 @@ const handleReset = () => {
 
 .select-option .iconfont {
   font-size: 11px;
-  color: #a78bfa;
+  color: var(--color-primary, #b79fff);
 }
 
 .cursor-preview {
@@ -787,7 +1290,7 @@ const handleReset = () => {
   left: 2px;
   width: 10px;
   height: 10px;
-  background: #8b5cf6;
+  background: var(--color-primary, #b79fff);
   border-radius: 2px;
 }
 
@@ -798,7 +1301,7 @@ const handleReset = () => {
   left: 2px;
   width: 10px;
   height: 2px;
-  background: #8b5cf6;
+  background: var(--color-primary, #b79fff);
   border-radius: 1px;
 }
 
@@ -809,7 +1312,7 @@ const handleReset = () => {
   left: 6px;
   width: 2px;
   height: 10px;
-  background: #8b5cf6;
+  background: var(--color-primary, #b79fff);
   border-radius: 1px;
 }
 
@@ -829,7 +1332,7 @@ const handleReset = () => {
 }
 
 .toggle-switch.active {
-  background: rgba(139, 92, 246, 0.25);
+  background: rgba(183, 159, 255, 0.25);
 }
 
 .toggle-slider {
@@ -840,13 +1343,12 @@ const handleReset = () => {
   height: 16px;
   background: #6b6b78;
   border-radius: 50%;
-  transition: all 0.3s ease;
+  transition: all 300ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .toggle-switch.active .toggle-slider {
   left: 24px;
-  background: #a78bfa;
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+  background: var(--color-primary, #b79fff);
 }
 
 /* ========== 颜色选择器 ========== */
@@ -891,15 +1393,15 @@ const handleReset = () => {
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background: rgba(139, 92, 246, 0.05);
-  border: 1px solid rgba(139, 92, 246, 0.1);
-  border-radius: 6px;
+  background: rgba(183, 159, 255, 0.05);
+  border: 1px solid rgba(183, 159, 255, 0.1);
+  border-radius: var(--radius-md, 10px);
   margin-top: 4px;
 }
 
 .threshold-hint .iconfont {
   font-size: 12px;
-  color: #8b5cf6;
+  color: var(--color-primary, #b79fff);
 }
 
 .threshold-hint span {
@@ -947,7 +1449,7 @@ const handleReset = () => {
 /* ========== 动画 ========== */
 .dropdown-enter-active,
 .dropdown-leave-active {
-  transition: all 0.15s ease;
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .dropdown-enter-from,

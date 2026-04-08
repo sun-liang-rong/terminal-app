@@ -382,7 +382,7 @@ onUnmounted(() => {
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
-  background: var(--color-brand-primary, #00f0ff);
+  background: var(--color-secondary, #2db7f2);
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-corner) {

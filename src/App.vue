@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import 'highlight.js/styles/github-dark.css' // 代码高亮样式
 import Sidebar from './components/Sidebar.vue'
 import Topbar from './components/Topbar.vue'
 import Terminal from './components/Terminal.vue'
@@ -15,8 +16,9 @@ import type { SshConfig } from './types/electron'
 import { updateStatus } from './utils/terminalStatus'
 import { toast } from './utils/notification'
 import { useResponsive } from './utils/useResponsive'
-import { initLayout, layoutState } from './utils/layoutStore'
+import { initLayout, layoutState, toggleAssistantPanel, setCustomThemeColor } from './utils/layoutStore'
 import { initModalManager, destroyModalManager } from './utils/modalManager'
+import { updateStatus } from './utils/terminalStatus'
 
 // 会话类型定义
 interface Session {
@@ -294,6 +296,13 @@ const loadHostsList = async () => {
   }
 }
 
+// 处理顶部栏标签页切换
+const handleTopbarSwitchTab = (tab: string) => {
+  if (tab === 'terminal' || tab === 'network' || tab === 'logs') {
+    activeTab.value = tab
+  }
+}
+
 // 快捷键支持
 const handleKeydown = (e: KeyboardEvent) => {
   // Cmd/Ctrl + T: 新建会话
@@ -330,17 +339,25 @@ onMounted(async () => {
   window.addEventListener('keydown', handleKeydown)
   // 初始化布局设置
   initLayout()
+  // 应用自定义主题色（如果已设置）
+  if (layoutState.value.customThemeColor) {
+    setCustomThemeColor(layoutState.value.customThemeColor)
+  }
   // 初始化模态框管理器
   initModalManager()
   // 初始化会话数量
   updateStatus({ sessionCount: sessions.value.length })
   // 加载主机列表
   await loadHostsList()
+  // 启动系统监控
+  startSystemMonitor()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   destroyModalManager()
+  // 停止系统监控
+  stopSystemMonitor()
 })
 
 // 监听 sessions 变化，更新会话数量和 SSH 状态
@@ -370,105 +387,210 @@ watch(activeTab, (newTab) => {
     sshPanelRef.value?.hideConnecting()
   }
 })
+
+// 计算左侧边栏是否折叠
+const sidebarCollapsed = computed(() => layoutState.value.sidebarCollapsed)
+
+// 计算 AI 面板是否可见
+const assistantPanelVisible = computed(() => layoutState.value.assistantPanelVisible)
+
+// 系统监控数据
+const cpuUsage = ref(0)
+const memoryUsage = ref(0)
+const memoryUsed = ref(0)
+const memoryTotal = ref(0)
+
+// 格式化字节
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+// 获取系统状态文本
+const systemStatusText = computed(() => {
+  if (cpuUsage.value >= 80 || memoryUsage.value >= 80) return '高负载'
+  if (cpuUsage.value >= 60 || memoryUsage.value >= 60) return '中等'
+  return '稳定'
+})
+
+// 刷新系统数据
+const refreshSystemData = async () => {
+  try {
+    if (window.electronAPI?.getSystemInfo) {
+      const sysInfo = await window.electronAPI.getSystemInfo()
+      cpuUsage.value = sysInfo.cpu.usage
+      memoryUsage.value = sysInfo.memory.usagePercent
+      memoryUsed.value = sysInfo.memory.used
+      memoryTotal.value = sysInfo.memory.total
+    }
+  } catch (e) {
+    console.error('Failed to refresh system data:', e)
+  }
+}
+
+// 系统监控定时器
+let systemMonitorInterval: ReturnType<typeof setInterval> | null = null
+
+// 启动系统监控
+const startSystemMonitor = () => {
+  refreshSystemData()
+  systemMonitorInterval = setInterval(refreshSystemData, 2000)
+}
+
+// 停止系统监控
+const stopSystemMonitor = () => {
+  if (systemMonitorInterval) {
+    clearInterval(systemMonitorInterval)
+    systemMonitorInterval = null
+  }
+}
 </script>
 
 <template>
-  <div class="app" :class="{ immersive: immersiveMode }">
+  <div class="app" :class="{
+    immersive: immersiveMode,
+    'sidebar-collapsed': sidebarCollapsed,
+    'assistant-visible': assistantPanelVisible
+  }">
+    <!-- 左侧边栏 -->
     <Sidebar
       :active-tab="activeTab"
       @tab-change="activeTab = $event"
     />
-    <div class="main-container">
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <!-- 顶部栏 -->
       <Topbar
         @open-settings="activeTab = 'settings'"
         @open-palette="showCommandPalette = true"
         @new-session="createNewSession"
+        @switch-tab="handleTopbarSwitchTab"
       />
 
-      <!-- 会话标签栏 -->
-      <div class="session-tabs" v-show="activeTab === 'terminal'">
-        <div class="tabs-list">
-          <div
-            v-for="session in sessions"
-            :key="session.id"
-            class="tab-item"
-            :class="{
-              active: activeSessionId === session.id,
-              'ssh-tab': session.type === 'ssh',
-              disconnected: session.disconnected
-            }"
-            @click="switchSession(session.id)"
-            :title="session.type === 'ssh' ? `${session.sshConfig?.username}@${session.host}` : '本地终端'"
-          >
-            <span class="tab-status-dot" :class="{ 'online': !session.disconnected, 'offline': session.disconnected }"></span>
-            <span class="tab-type">{{ session.type === 'ssh' ? 'SSH' : '本地' }}</span>
-            <span class="tab-separator">|</span>
-            <span class="tab-info">{{ session.type === 'ssh' ? (session.host || 'server') : (session.shellType || 'Shell') }}</span>
+      <!-- 内容区域 -->
+      <div class="content-area">
+        <!-- 左侧主要内容 -->
+        <div class="main-panel">
+          <!-- 会话标签栏 -->
+          <div class="session-tabs" v-show="activeTab === 'terminal'">
+            <div class="tabs-list">
+              <div
+                v-for="session in sessions"
+                :key="session.id"
+                class="tab-item"
+                :class="{
+                  active: activeSessionId === session.id,
+                  'ssh-tab': session.type === 'ssh',
+                  disconnected: session.disconnected
+                }"
+                @click="switchSession(session.id)"
+                :title="session.type === 'ssh' ? `${session.sshConfig?.username}@${session.host}` : '本地终端'"
+              >
+                <span class="tab-status-dot" :class="{ 'online': !session.disconnected, 'offline': session.disconnected }"></span>
+                <span class="tab-type">{{ session.type === 'ssh' ? 'SSH' : '本地' }}</span>
+                <span class="tab-separator">|</span>
+                <span class="tab-info">{{ session.type === 'ssh' ? (session.host || 'server') : (session.shellType || 'Shell') }}</span>
+                <button
+                  class="tab-close"
+                  @click.stop="closeSession(session.id)"
+                  v-show="sessions.length > 1"
+                  title="关闭会话"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <!-- 添加新 Shell Tab 按钮 -->
             <button
-              class="tab-close"
-              @click.stop="closeSession(session.id)"
-              v-show="sessions.length > 1"
-              title="关闭会话"
-            >×</button>
+              class="add-tab-btn"
+              @click="createNewSession"
+              title="新建会话 (Ctrl+T)"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- 终端包装器 -->
+          <div class="terminal-wrapper">
+            <div
+              v-for="session in sessions"
+              :key="session.id"
+              class="terminal-panel"
+              :class="{ active: activeSessionId === session.id && activeTab === 'terminal' }"
+            >
+              <!-- 本地终端 -->
+              <Terminal
+                v-if="session.type === 'local'"
+                v-show="activeSessionId === session.id && activeTab === 'terminal'"
+                :session-id="session.id"
+                :active="activeSessionId === session.id && activeTab === 'terminal'"
+                @title-change="updateSessionTitle(session.id, $event)"
+                @shell-change="updateSessionShell(session.id, $event)"
+                @new-session="createNewSession"
+                @close-session="closeSession(activeSessionId)"
+                @switch-session="switchSessionByIndex"
+              />
+              <!-- SSH 终端 -->
+              <SshTerminal
+                v-else-if="session.type === 'ssh'"
+                v-show="activeSessionId === session.id && activeTab === 'terminal'"
+                :session-id="session.id"
+                :ssh-id="session.sshId || ''"
+                :host="session.host"
+                :active="activeSessionId === session.id && activeTab === 'terminal'"
+                @title-change="updateSessionTitle(session.id, $event)"
+                @close-session="closeSession(activeSessionId)"
+                @disconnected="handleSSHDisconnected(session.id)"
+              />
+            </div>
+
+            <!-- SSH 连接面板 -->
+            <div class="panel-container" v-show="activeTab === 'ssh'">
+              <SSHPanel ref="sshPanelRef" @connect="handleSSHConnect" />
+            </div>
+
+            <!-- 设置面板 -->
+            <div class="panel-container" v-show="activeTab === 'settings'">
+              <SettingsPanel />
+            </div>
+          </div>
+
+          <!-- 系统状态栏 -->
+          <div class="system-monitor" v-show="activeTab === 'terminal'">
+            <div class="monitor-header">
+              <span class="monitor-title">系统负载</span>
+              <span class="monitor-status" :class="{ 'high': cpuUsage >= 80 || memoryUsage >= 80, 'medium': (cpuUsage >= 60 && cpuUsage < 80) || (memoryUsage >= 60 && memoryUsage < 80) }">{{ systemStatusText }}</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: Math.max(cpuUsage, memoryUsage) + '%' }" :class="{ 'high': cpuUsage >= 80 || memoryUsage >= 80, 'medium': (cpuUsage >= 60 && cpuUsage < 80) || (memoryUsage >= 60 && memoryUsage < 80) }"></div>
+            </div>
+            <div class="monitor-stats">
+              <span>CPU: {{ cpuUsage.toFixed(0) }}%</span>
+              <span>RAM: {{ formatBytes(memoryUsed) }} / {{ formatBytes(memoryTotal) }}</span>
+            </div>
           </div>
         </div>
-        <button class="tab-add" @click="createNewSession" title="新建会话 (Ctrl+T)">
-          <span>+</span>
-        </button>
-      </div>
 
-      <!-- 终端区域 -->
-      <div class="terminal-wrapper">
-        <div
-          v-for="session in sessions"
-          :key="session.id"
-          class="terminal-panel"
-          :class="{ active: activeSessionId === session.id && activeTab === 'terminal' }"
-        >
-          <!-- 本地终端 -->
-          <Terminal
-            v-if="session.type === 'local'"
-            v-show="activeSessionId === session.id && activeTab === 'terminal'"
-            :session-id="session.id"
-            :active="activeSessionId === session.id && activeTab === 'terminal'"
-            @title-change="updateSessionTitle(session.id, $event)"
-            @shell-change="updateSessionShell(session.id, $event)"
-            @new-session="createNewSession"
-            @close-session="closeSession(activeSessionId)"
-            @switch-session="switchSessionByIndex"
-          />
-          <!-- SSH 终端 -->
-          <SshTerminal
-            v-else-if="session.type === 'ssh'"
-            v-show="activeSessionId === session.id && activeTab === 'terminal'"
-            :session-id="session.id"
-            :ssh-id="session.sshId || ''"
-            :host="session.host"
-            :active="activeSessionId === session.id && activeTab === 'terminal'"
-            @title-change="updateSessionTitle(session.id, $event)"
-            @close-session="closeSession(activeSessionId)"
-            @disconnected="handleSSHDisconnected(session.id)"
+        <!-- 右侧 AI 助手面板 -->
+        <div class="ai-panel-wrapper" v-show="assistantPanelVisible">
+          <AssistantPanel
+            :visible="assistantPanelVisible"
+            @close="toggleAssistantPanel()"
           />
         </div>
-
-        <!-- SSH 连接面板 -->
-        <div class="panel-container" v-show="activeTab === 'ssh'">
-          <SSHPanel ref="sshPanelRef" @connect="handleSSHConnect" />
-        </div>
-
-        <!-- 助手面板 -->
-        <div class="panel-container" v-show="activeTab === 'assistant'">
-          <AssistantPanel />
-        </div>
-
-        <!-- 设置面板 -->
-        <div class="panel-container" v-show="activeTab === 'settings'">
-          <SettingsPanel />
-        </div>
       </div>
+    </main>
 
-      <Statusbar />
-    </div>
+    <!-- 底部状态栏 -->
+    <Statusbar />
 
     <!-- 全局通知容器 -->
     <ToastContainer />
@@ -483,6 +605,10 @@ watch(activeTab, (newTab) => {
       @ai-query="handlePaletteAiQuery"
       @switch-tab="handlePaletteSwitchTab"
     />
+
+    <!-- 背景光效 -->
+    <div class="ambient-glow primary"></div>
+    <div class="ambient-glow secondary"></div>
   </div>
 </template>
 
@@ -497,84 +623,118 @@ watch(activeTab, (newTab) => {
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   overflow: hidden;
-  background: var(--color-bg-base);
+  background: var(--color-surface);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+</style>
 
+<style scoped>
 .app {
   display: flex;
   height: 100vh;
-  background: var(--color-bg-base);
+  background: var(--color-surface, #0c0e12);
   position: relative;
+  overflow: hidden;
 }
 
-.main-container {
+/* 背景光效 */
+.ambient-glow {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-glow.primary {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  background: rgba(183, 159, 255, 0.05);
+  filter: blur(120px);
+}
+
+.ambient-glow.secondary {
+  bottom: 0;
+  right: 0;
+  width: 400px;
+  height: 400px;
+  background: rgba(45, 183, 242, 0.05);
+  filter: blur(100px);
+}
+
+/* 主内容区 */
+.main-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  overflow: hidden;
+  margin-left: 256px;
+  margin-bottom: 24px;
+  transition: margin-left 0.3s ease;
+  z-index: 1;
   position: relative;
-  background: linear-gradient(180deg, #0c0c12 0%, #08080c 100%);
-  border-radius: 12px 0 0 0;
-  margin: 6px 0 6px 0;
 }
 
-/* 终端区域容器 - 增加视觉边界 */
-.terminal-wrapper {
+.app.sidebar-collapsed .main-content {
+  margin-left: 72px;
+}
+
+/* 内容区域 */
+.content-area {
   flex: 1;
+  display: flex;
   overflow: hidden;
-  position: relative;
-  margin: 0 8px;
-  border-radius: 12px;
-  background: #0a0a0f;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 0 0 1px rgba(0, 0, 0, 0.3),
-    0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 0 16px 16px;
 }
 
-.terminal-wrapper::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.15), transparent);
-  pointer-events: none;
-  z-index: 10;
+.main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+  min-width: 0;
 }
 
-/* 会话标签栏 - 紧凑设计 */
+/* AI面板包装器 */
+.ai-panel-wrapper {
+  display: flex;
+  width: 320px;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ai-panel-wrapper[v-show="false"] {
+  width: 0;
+}
+
+/* 会话标签栏 */
 .session-tabs {
   display: flex;
   align-items: center;
-  height: 36px;
-  background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  padding: 0 8px;
-  gap: 6px;
+  height: 40px;
+  gap: 8px;
   overflow: hidden;
-  box-sizing: border-box;
   flex-shrink: 0;
 }
 
 .tabs-list {
   display: flex;
-  flex: 1;
   gap: 4px;
   overflow-x: auto;
   overflow-y: hidden;
+  flex: 1;
   height: 100%;
   align-items: center;
-  padding: 4px 0;
 }
 
 .tabs-list::-webkit-scrollbar {
-  height: 2px;
+  height: 4px;
 }
 
 .tabs-list::-webkit-scrollbar-track {
@@ -582,88 +742,100 @@ body {
 }
 
 .tabs-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 1px;
+  background: var(--color-outline-variant, #46484d);
+  border-radius: 10px;
 }
 
-/* Tab 样式 - 会话类型颜色区分 */
+/* 添加 Tab 按钮 */
+.add-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin-right: 8px;
+  background: transparent;
+  border: 1px solid var(--color-outline-variant, #46484d);
+  border-radius: 6px;
+  color: var(--color-on-surface-variant, #aaabb0);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.add-tab-btn:hover {
+  background: var(--color-surface-container-high, #1d2025);
+  border-color: var(--color-primary, #b79fff);
+  color: var(--color-primary, #b79fff);
+}
+
+.add-tab-btn:active {
+  transform: scale(0.95);
+}
+
+.add-tab-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tab 样式 */
 .tab-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  height: 26px;
+  gap: 8px;
+  padding: 6px 14px;
+  height: 32px;
   min-width: 100px;
   max-width: 180px;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 6px;
+  background: rgba(29, 32, 37, 0.6);
+  border-radius: 8px;
   cursor: pointer;
-  color: #7a7a8a;
+  color: var(--color-on-surface-variant, #aaabb0);
   font-size: 11px;
-  font-weight: 500;
+  font-family: var(--font-mono, 'Fira Code', monospace);
+  font-weight: 600;
   transition: all 0.15s ease;
-  border: 1px solid transparent;
+  border: none;
   position: relative;
-  box-sizing: border-box;
   flex-shrink: 0;
 }
 
 .tab-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: #b0b0c0;
+  background: rgba(29, 32, 37, 0.8);
+  color: var(--color-on-surface, #f6f6fc);
 }
 
-/* 本地会话 - 青色主题 */
-.tab-item.active:not(.ssh-tab) {
-  background: rgba(0, 240, 255, 0.08);
-  color: #00f0ff;
-  border-color: rgba(0, 240, 255, 0.15);
+.tab-item.active {
+  background: rgba(29, 32, 37, 0.8);
+  color: var(--color-primary, #b79fff);
 }
 
-.tab-item.active:not(.ssh-tab)::after {
+.tab-item.active::after {
   content: '';
   position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 3px;
-  height: 3px;
-  background: #00f0ff;
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-primary, #b79fff);
+  box-shadow: 0 0 10px var(--color-primary, #b79fff);
+  border-radius: 1px;
 }
 
-/* SSH 会话 - 绿色主题 */
 .tab-item.ssh-tab.active {
-  background: rgba(40, 202, 65, 0.08);
-  color: #28ca41;
-  border-color: rgba(40, 202, 65, 0.15);
+  color: var(--color-secondary, #2db7f2);
 }
 
 .tab-item.ssh-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 3px;
-  height: 3px;
-  background: #28ca41;
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(40, 202, 65, 0.6);
+  background: var(--color-secondary, #2db7f2);
+  box-shadow: 0 0 10px var(--color-secondary, #2db7f2);
 }
 
-/* 断线状态 */
 .tab-item.disconnected {
-  border-color: rgba(255, 95, 87, 0.15);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
-.tab-item.disconnected:hover {
-  opacity: 1;
-}
-
-/* 状态点 */
 .tab-status-dot {
   width: 6px;
   height: 6px;
@@ -672,31 +844,25 @@ body {
 }
 
 .tab-status-dot.online {
-  background: #28ca41;
-  box-shadow: 0 0 4px rgba(40, 202, 65, 0.5);
+  background: var(--color-secondary, #2db7f2);
+  box-shadow: 0 0 5px var(--color-secondary, #2db7f2);
 }
 
 .tab-status-dot.offline {
-  background: #ff5f57;
-  animation: blink 1.5s ease-in-out infinite;
+  background: var(--color-error, #ff6e84);
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-/* Tab 内容 */
 .tab-type {
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
 .tab-separator {
-  color: #3a3a48;
+  color: var(--color-outline-variant, #46484d);
   font-size: 9px;
+  opacity: 0.5;
 }
 
 .tab-info {
@@ -705,63 +871,48 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
-  color: #5a5a68;
 }
 
-.tab-item.active .tab-info {
-  color: inherit;
-  opacity: 0.9;
-}
-
-/* 关闭按钮 */
 .tab-close {
   width: 16px;
   height: 16px;
-  border-radius: 3px;
+  border-radius: 4px;
   border: none;
   background: transparent;
-  color: #5a5a68;
+  color: var(--color-on-surface-variant, #aaabb0);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
   opacity: 0;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
 
+.tab-close svg {
+  width: 12px;
+  height: 12px;
+}
+
 .tab-item:hover .tab-close {
-  opacity: 1;
+  opacity: 0.6;
 }
 
 .tab-close:hover {
-  background: rgba(255, 95, 87, 0.15);
-  color: #ff5f57;
+  opacity: 1;
+  background: rgba(255, 110, 132, 0.15);
+  color: var(--color-error, #ff6e84);
 }
 
-/* 新建按钮 */
-.tab-add {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.02);
-  color: #6a6a78;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
-
-.tab-add:hover {
-  background: rgba(0, 240, 255, 0.1);
-  color: #00f0ff;
-  border-color: rgba(0, 240, 255, 0.2);
+/* 终端包装器 */
+.terminal-wrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  border-radius: 0;
+  background: var(--color-surface-container-lowest, #000000);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 15px -3px rgba(45, 183, 242, 0.2);
+  border: 1px solid rgba(70, 72, 77, 0.15);
 }
 
 /* 终端面板 */
@@ -772,7 +923,7 @@ body {
   right: 0;
   bottom: 0;
   display: none;
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -788,44 +939,95 @@ body {
   right: 0;
   bottom: 0;
   overflow: hidden;
+  border-radius: 0;
+}
+
+/* 系统监控栏 */
+.system-monitor {
+  background: rgba(17, 19, 24, 0.6);
+  border: 1px solid rgba(70, 72, 77, 0.15);
   border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* 沉浸模式 - 自动隐藏侧边栏，最大化终端区域 */
+.monitor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.monitor-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-on-surface-variant, #aaabb0);
+}
+
+.monitor-status {
+  font-size: 10px;
+  font-family: var(--font-mono, 'Fira Code', monospace);
+  color: var(--color-secondary, #2db7f2);
+}
+
+.monitor-status.medium {
+  color: var(--color-tertiary, #ff86c3);
+}
+
+.monitor-status.high {
+  color: var(--color-error, #ff6e84);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(29, 32, 37, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-secondary, #2db7f2), var(--color-primary, #b79fff));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-fill.medium {
+  background: linear-gradient(90deg, var(--color-tertiary, #ff86c3), var(--color-tertiary-fixed, #ff8bc5));
+}
+
+.progress-fill.high {
+  background: linear-gradient(90deg, var(--color-error, #ff6e84), var(--color-error-dim, #d73357));
+}
+
+.monitor-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-family: var(--font-mono, 'Fira Code', monospace);
+  color: var(--color-on-surface-variant, #aaabb0);
+}
+
+/* 沉浸模式 */
 .app.immersive {
-  background: #0a0a0f;
+  background: var(--color-surface-container-lowest, #000000);
 }
 
-.app.immersive .main-container {
+.app.immersive .main-content {
   margin: 0;
-  border-radius: 0;
 }
 
-.app.immersive .terminal-wrapper {
-  margin: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: #0a0a0f;
-}
-
-.app.immersive .terminal-wrapper::before {
+.app.immersive .session-tabs,
+.app.immersive :deep(.topbar) {
   display: none;
 }
 
-/* 沉浸模式隐藏标签栏 */
-.app.immersive .session-tabs {
-  height: 0;
-  padding: 0;
-  overflow: hidden;
-  opacity: 0;
-}
-
-/* 沉浸模式隐藏顶部栏 */
-.app.immersive :deep(.topbar) {
-  height: 0;
-  padding: 0;
-  overflow: hidden;
-  opacity: 0;
+.app.immersive .system-monitor {
+  display: none;
 }
 
 /* 响应式 */
@@ -833,44 +1035,15 @@ body {
   .tab-item {
     min-width: 80px;
     max-width: 120px;
+    padding: 6px 10px;
   }
 
   .tab-info {
     display: none;
   }
-}
 
-.placeholder-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  color: #6b6b78;
-  padding: 40px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.placeholder-icon {
-  font-size: 64px;
-  opacity: 0.6;
-  filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.1));
-}
-
-.placeholder-text {
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
-}
-
-/* 面板容器 */
-.panel-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
+  .app.assistant-visible .main-content {
+    margin-right: 0;
+  }
 }
 </style>

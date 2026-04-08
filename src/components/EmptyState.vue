@@ -110,21 +110,21 @@ defineProps<{
 }
 
 .empty-icon.config {
-  background: rgba(139, 92, 246, 0.08);
-  border-color: rgba(139, 92, 246, 0.15);
+  background: rgba(183, 159, 255, 0.08);
+  border-color: rgba(183, 159, 255, 0.15);
 }
 
 .empty-icon.config i {
-  color: #8b5cf6;
+  color: var(--color-primary, #b79fff);
 }
 
 .empty-icon.ai {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(0, 240, 255, 0.08) 100%);
-  border-color: rgba(139, 92, 246, 0.2);
+  background: linear-gradient(135deg, rgba(183, 159, 255, 0.1) 0%, rgba(45, 183, 242, 0.08) 100%);
+  border-color: rgba(183, 159, 255, 0.2);
 }
 
 .empty-icon.ai i {
-  color: #a78bfa;
+  color: var(--color-primary, #b79fff);
 }
 
 /* 内容 */

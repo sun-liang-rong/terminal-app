@@ -78,21 +78,21 @@ const handleAction = (toast: ToastMessage) => {
   min-width: 320px;
   max-width: 420px;
   padding: var(--space-4) var(--space-5);
-  background: linear-gradient(135deg, var(--color-bg-elevated) 0%, var(--color-bg-surface) 100%);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface, #2c2c2e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg, 14px);
   color: var(--color-text-primary);
   font-size: var(--font-size-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.25));
   cursor: default;
-  transition: all var(--transition-normal);
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   position: relative;
   overflow: hidden;
 }
 
 .toast-item:hover {
   transform: translateX(-4px);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-xl, 0 16px 48px rgba(0, 0, 0, 0.3));
 }
 
 .toast-item.has-action {
@@ -101,63 +101,63 @@ const handleAction = (toast: ToastMessage) => {
 
 /* 类型样式 */
 .toast-item.info {
-  border-color: rgba(96, 165, 250, 0.3);
+  border-color: rgba(45, 183, 242, 0.3);
 }
 
 .toast-item.info .toast-icon {
-  color: #60a5fa;
+  color: var(--color-secondary, #2db7f2);
 }
 
 .toast-item.info .toast-progress {
-  background: #60a5fa;
+  background: var(--color-secondary, #2db7f2);
 }
 
 .toast-item.success {
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(45, 183, 242, 0.3);
 }
 
 .toast-item.success .toast-icon {
-  color: var(--color-brand-success);
+  color: var(--color-secondary, #2db7f2);
 }
 
 .toast-item.success .toast-progress {
-  background: var(--color-brand-success);
+  background: var(--color-secondary, #2db7f2);
 }
 
 .toast-item.warning {
-  border-color: rgba(250, 204, 21, 0.3);
+  border-color: rgba(255, 134, 195, 0.3);
 }
 
 .toast-item.warning .toast-icon {
-  color: var(--color-brand-warning);
+  color: var(--color-tertiary, #ff86c3);
 }
 
 .toast-item.warning .toast-progress {
-  background: var(--color-brand-warning);
+  background: var(--color-tertiary, #ff86c3);
 }
 
 .toast-item.error {
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(255, 110, 132, 0.3);
 }
 
 .toast-item.error .toast-icon {
-  color: var(--color-brand-error);
+  color: var(--color-error, #ff6e84);
 }
 
 .toast-item.error .toast-progress {
-  background: var(--color-brand-error);
+  background: var(--color-error, #ff6e84);
 }
 
 .toast-item.action {
-  border-color: rgba(139, 92, 246, 0.3);
+  border-color: rgba(183, 159, 255, 0.3);
 }
 
 .toast-item.action .toast-icon {
-  color: var(--color-ai-primary);
+  color: var(--color-primary, #b79fff);
 }
 
 .toast-item.action .toast-progress {
-  background: var(--color-ai-primary);
+  background: var(--color-primary, #b79fff);
 }
 
 /* 图标 */
@@ -195,19 +195,19 @@ const handleAction = (toast: ToastMessage) => {
 .toast-action-btn {
   align-self: flex-start;
   padding: 6px 12px;
-  background: rgba(0, 240, 255, 0.1);
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  border-radius: var(--radius-sm);
-  color: var(--color-brand-primary);
+  background: rgba(45, 183, 242, 0.1);
+  border: 1px solid rgba(45, 183, 242, 0.2);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--color-secondary, #2db7f2);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .toast-action-btn:hover {
-  background: rgba(0, 240, 255, 0.15);
-  border-color: rgba(0, 240, 255, 0.3);
+  background: rgba(45, 183, 242, 0.15);
+  border-color: rgba(45, 183, 242, 0.3);
 }
 
 /* 关闭按钮 */
@@ -219,10 +219,10 @@ const handleAction = (toast: ToastMessage) => {
   height: 24px;
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-tertiary);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--color-text-tertiary, #6e6e73);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   flex-shrink: 0;
 }
 
@@ -254,7 +254,7 @@ const handleAction = (toast: ToastMessage) => {
 /* 动画 */
 .toast-slide-enter-active,
 .toast-slide-leave-active {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 250ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .toast-slide-enter-from {
@@ -268,7 +268,7 @@ const handleAction = (toast: ToastMessage) => {
 }
 
 .toast-slide-move {
-  transition: transform 0.35s ease;
+  transition: transform 250ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 /* 响应式 */

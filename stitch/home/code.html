@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=800, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .terminal-glow {
+            box-shadow: 0 0 15px -3px rgba(45, 183, 242, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #46484d;
+            border-radius: 10px;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0e12;
+            color: #f6f6fc;
+            margin: 0;
+            overflow: hidden;
+        }
+        .tab-active {
+            position: relative;
+        }
+        .tab-active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #b79fff;
+            box-shadow: 0 0 10px #b79fff;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#290070",
+                    "inverse-primary": "#684cb6",
+                    "tertiary-fixed-dim": "#f976ba",
+                    "surface-container-highest": "#23262c",
+                    "outline": "#74757a",
+                    "on-primary": "#361083",
+                    "surface-bright": "#292c32",
+                    "primary-fixed-dim": "#9d81f0",
+                    "on-tertiary": "#5f003e",
+                    "tertiary-fixed": "#ff8bc5",
+                    "surface-container-high": "#1d2025",
+                    "secondary": "#2db7f2",
+                    "primary": "#b79fff",
+                    "secondary-fixed-dim": "#73ceff",
+                    "error": "#ff6e84",
+                    "on-secondary-container": "#f2f9ff",
+                    "on-tertiary-fixed": "#360021",
+                    "on-error": "#490013",
+                    "tertiary-container": "#f673b7",
+                    "on-surface-variant": "#aaabb0",
+                    "on-tertiary-fixed-variant": "#73004b",
+                    "on-primary-fixed-variant": "#330b80",
+                    "primary-dim": "#a88cfb",
+                    "surface-tint": "#b79fff",
+                    "on-secondary-fixed-variant": "#005777",
+                    "on-primary-fixed": "#000000",
+                    "surface-variant": "#23262c",
+                    "on-secondary": "#003044",
+                    "surface": "#0c0e12",
+                    "error-container": "#a70138",
+                    "on-tertiary-container": "#4a002f",
+                    "background": "#0c0e12",
+                    "surface-container": "#171a1f",
+                    "error-dim": "#d73357",
+                    "secondary-fixed": "#9bdaff",
+                    "inverse-on-surface": "#53555a",
+                    "on-surface": "#f6f6fc",
+                    "surface-container-low": "#111318",
+                    "on-error-container": "#ffb2b9",
+                    "secondary-dim": "#05a9e3",
+                    "inverse-surface": "#f9f9ff",
+                    "tertiary-dim": "#f271b5",
+                    "surface-container-lowest": "#000000",
+                    "secondary-container": "#00668a",
+                    "outline-variant": "#46484d",
+                    "on-background": "#f6f6fc",
+                    "primary-fixed": "#ab8ffe",
+                    "on-secondary-fixed": "#00394f",
+                    "primary-container": "#ab8ffe",
+                    "tertiary": "#ff86c3",
+                    "surface-dim": "#0c0e12"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": [
+                            "Space Grotesk"
+                    ],
+                    "body": [
+                            "Inter"
+                    ],
+                    "label": [
+                            "Inter"
+                    ],
+                    "mono": [
+                            "Fira Code",
+                            "monospace"
+                    ]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface flex h-screen overflow-hidden">
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col py-6 px-4 gap-2 bg-[#111318]/60 backdrop-blur-xl shadow-2xl shadow-black/40 z-50 transition-transform duration-300" id="left-sidebar">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-on-primary shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>terminal</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-on-surface text-sm tracking-tight leading-none">架构师</h2>
+<p class="text-[10px] uppercase tracking-widest text-secondary font-mono mt-1">管理员模式</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="text-[10px] uppercase tracking-widest text-on-surface-variant font-semibold px-2 mb-2">核心工具</div>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#aaabb0] hover:bg-[#1d2025]/50 hover:text-[#f6f6fc] transition-all duration-300 rounded-lg" href="#">
+<span class="material-symbols-outlined text-lg">dns</span>
+<span class="font-body text-sm">SSH 连接</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#f6f6fc] bg-[#1d2025] rounded-lg shadow-[0_0_10px_rgba(45,183,242,0.15)] ring-1 ring-secondary/20" href="#">
+<span class="material-symbols-outlined text-lg" style='font-variation-settings: "FILL" 1;'>terminal</span>
+<span class="font-body text-sm">本地终端</span>
+</a>
+</nav>
+<div class="mt-auto space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#aaabb0] hover:text-[#f6f6fc] transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+<span class="font-body text-sm">帮助</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#aaabb0] hover:text-[#f6f6fc] transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">analytics</span>
+<span class="font-body text-sm">状态</span>
+</a>
+</div>
+</aside>
+<main class="flex-1 ml-64 flex flex-col h-screen overflow-hidden relative transition-all duration-300" id="main-content">
+<header class="w-full h-12 flex items-center px-4 justify-between bg-[#0c0e12] z-40 border-b border-outline-variant/10">
+<div class="flex items-center gap-6 flex-1">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-high border-none rounded-full py-1 pl-9 pr-4 text-xs w-40 focus:ring-1 focus:ring-primary/40 placeholder:text-on-surface-variant/50 transition-all font-body" placeholder="搜索会话..." type="text"/>
+</div>
+<nav class="flex gap-1 h-full items-center">
+<div class="flex items-center gap-2 px-4 py-1.5 rounded-md bg-surface-container-high/60 text-primary tab-active cursor-pointer">
+<span class="text-[11px] font-mono font-bold">会话</span>
+<span class="bg-primary/20 text-primary text-[9px] px-1.5 rounded-full">03</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container-high/40 cursor-pointer transition-colors">
+<span class="text-[11px] font-mono font-bold">网络</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container-high/40 cursor-pointer transition-colors">
+<span class="text-[11px] font-mono font-bold">日志</span>
+</div>
+<button class="ml-2 p-1 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded transition-all active:scale-90" title="新建终端会话">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</nav>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-container-high rounded-md transition-colors cursor-pointer active:scale-95" id="toggle-sidebar" title="切换左侧边栏">
+<span class="material-symbols-outlined text-xl">side_navigation</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-container-high rounded-md transition-colors cursor-pointer active:scale-95" id="toggle-ai-sidebar" title="切换AI助手">
+<span class="material-symbols-outlined text-xl">dock_to_right</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-container-high rounded-md transition-colors cursor-pointer active:scale-95">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30 cursor-pointer active:scale-95 ml-1">
+<img class="w-full h-full object-cover" data-alt="close-up portrait of a developer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAb0Gp2OuNfH9xlcmyhdnKUTrxYRG_D5xKIxvKGrHPJJ0cjtSASbQ6rR3bNAADNlQLijfbSDEt2zI5OYPCG9VlVAtgQ1etC5JV00vbz7QrWsVJ_wdhZs6DHphTgmzhvNZAkcbWY4sSHT2x25VOhRkFEaAQFy7F2A3hlWnfMU1_z5AuxIIbfcZJ2VvmyR8t5FORgDEjhjYpC-Rfv5KRMg1hxLPpZkv00qylkx7v_EwFsOjupHhBGRJ2zVKV3doKJBA775gqEkgXkbpQ"/>
+</div>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<section class="flex-1 flex flex-col p-4 pb-10 bg-surface-container-lowest overflow-hidden">
+<div class="flex-1 rounded-xl bg-surface-container-low/30 backdrop-blur-sm border border-outline-variant/10 flex flex-col overflow-hidden shadow-2xl terminal-glow">
+<div class="h-8 bg-surface-container-high/50 flex items-center px-4 gap-2 border-b border-outline-variant/5">
+<div class="flex gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-tertiary/40"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-secondary/40"></div>
+</div>
+<div class="flex-1 flex justify-center">
+<div class="flex items-center gap-2 px-3 py-0.5 bg-surface-container-highest rounded-md text-[10px] font-mono text-on-surface-variant/80 border border-outline-variant/10">
+<span class="material-symbols-outlined text-[10px]">terminal</span>
+                            powershell — nocturnal-dev
+                        </div>
+</div>
+</div>
+<div class="flex-1 p-6 font-mono text-[13px] leading-relaxed custom-scrollbar overflow-y-auto">
+<div class="mb-6 opacity-60">
+<pre class="text-secondary text-[10px] leading-none mb-4">  _  _         _                         _ 
+ | \| |___  __| |_ _  _ _ _ _ _  __ _ | |
+ | .` / _ \/ _|  _| || | '_| ' \/ _` || |
+ |_|\_\___/\__|\__|\_,_|_| |_||_\__,_||_|
+                    COMMAND INTERFACE v2.4.0
+                        </pre>
+<p class="text-on-surface-variant">System Initialized: <span class="text-tertiary">0xAF88-92</span></p>
+<p class="text-on-surface-variant">Active Kernel: <span class="text-primary">LTS-20.1-Nocturnal</span></p>
+</div>
+<div class="space-y-4">
+<div class="group">
+<div class="flex items-start gap-3">
+<span class="text-secondary font-bold">λ</span>
+<div class="flex-1">
+<span class="text-primary font-bold">~/projects/nocturnal-cmd</span>
+<span class="text-tertiary px-1">(main)</span>
+<span class="text-on-surface">npm run build:prod</span>
+</div>
+</div>
+<div class="pl-6 mt-1 text-on-surface-variant/70 space-y-0.5">
+<p>&gt; nocturnal-cmd@2.4.0 build:prod</p>
+&gt; vite build --mode production
+<p class="text-secondary">✓ building for production...</p>
+<p class="text-secondary">✓ 842 modules transformed.</p>
+<p class="text-secondary">✓ rendering chunks...</p>
+<div class="flex items-center gap-4 mt-2 py-1 px-3 bg-surface-container-high/40 rounded-lg w-fit">
+<span class="text-on-surface text-xs font-bold">dist/index.html</span>
+<span class="text-on-surface-variant/50 text-[10px]">0.45 kB</span>
+<span class="text-primary text-xs font-bold">dist/assets/index.js</span>
+<span class="text-on-surface-variant/50 text-[10px]">142.21 kB │ gzip: 44.82 kB</span>
+</div>
+<p class="text-primary-dim pt-2">✨ Done in 12.42s.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 mt-8">
+<span class="text-secondary font-bold">λ</span>
+<div class="flex-1 flex items-center gap-1">
+<span class="text-primary font-bold">~/projects/nocturnal-cmd</span>
+<span class="text-tertiary px-1">(main)</span>
+<div class="w-2 h-5 bg-secondary animate-pulse ml-1 terminal-cursor shadow-[0_0_8px_rgba(45,183,242,0.6)]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 grid grid-cols-12 gap-4">
+<div class="col-span-12 bg-surface-container-low border border-outline-variant/10 rounded-xl p-4 flex flex-col justify-center">
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">系统负载</span>
+<span class="text-[10px] font-mono text-secondary">稳定</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-secondary to-primary w-[34%]"></div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] font-mono text-on-surface-variant/60">
+<span>CPU: 12%</span>
+<span>RAM: 4.2GB / 16GB</span>
+</div>
+</div>
+</div>
+</section>
+<aside class="w-80 bg-surface-container-low/50 border-l border-outline-variant/10 flex flex-col pb-10 transition-transform duration-300" id="right-ai-sidebar">
+<div class="h-12 flex items-center justify-between px-4 border-b border-outline-variant/10 bg-surface-container-low/80 backdrop-blur-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+<h3 class="font-headline font-bold text-sm text-on-surface tracking-tight">AI 助手</h3>
+</div>
+<button class="p-1 hover:bg-surface-container-high rounded-md transition-colors text-on-surface-variant" onclick="document.getElementById('right-ai-sidebar').style.display='none'">
+<span class="material-symbols-outlined text-lg">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+<div class="flex flex-col gap-1.5 items-start">
+<div class="bg-surface-container-high text-on-surface p-3 rounded-xl rounded-tl-none text-xs max-w-[85%] leading-relaxed">
+                        你好！我正在监控您的构建流程。生产环境包看起来一切正常。
+                    </div>
+<span class="text-[9px] text-on-surface-variant px-1">AI 助手 • 下午 12:42</span>
+</div>
+<div class="flex flex-col gap-1.5 items-end">
+<div class="bg-primary/20 text-on-surface p-3 rounded-xl rounded-tr-none text-xs max-w-[85%] leading-relaxed border border-primary/20">
+                        检查当前依赖项中是否存在任何安全漏洞。
+                    </div>
+<span class="text-[9px] text-on-surface-variant px-1">您 • 下午 12:43</span>
+</div>
+<div class="flex flex-col gap-1.5 items-start">
+<div class="bg-surface-container-high text-on-surface p-3 rounded-xl rounded-tl-none text-xs max-w-[85%] leading-relaxed border border-outline-variant/10">
+                        正在分析 package.json... 发现了 4 个中等漏洞。我建议运行 <code class="bg-surface-container-highest px-1 text-secondary">npm audit fix</code>。
+                    </div>
+<span class="text-[9px] text-on-surface-variant px-1">AI 助手 • 下午 12:43</span>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low/80 backdrop-blur-md border-t border-outline-variant/10">
+<div class="flex items-center gap-2 mb-2">
+<button class="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded transition-all">
+<span class="material-symbols-outlined text-sm">attach_file</span>
+</button>
+<div class="flex-1 flex items-center justify-between bg-surface-container-highest px-2 py-1 rounded text-[10px] text-on-surface-variant border border-outline-variant/10 cursor-pointer hover:border-primary/30 transition-colors">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[12px] text-primary">psychology</span>
+                                GPT-4o Nocturnal
+                            </span>
+<span class="material-symbols-outlined text-[12px]">expand_more</span>
+</div>
+</div>
+<div class="relative">
+<textarea class="w-full bg-surface-container-high border border-outline-variant/10 rounded-lg p-3 pr-12 text-xs focus:ring-1 focus:ring-primary/40 focus:border-primary/40 placeholder:text-on-surface-variant/40 resize-none font-body custom-scrollbar" placeholder="问我任何问题..." rows="3"></textarea>
+<button class="absolute right-2 bottom-2 p-2 bg-primary text-on-primary rounded-lg shadow-lg shadow-primary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+</aside>
+</div>
+<footer class="fixed bottom-0 w-full h-6 flex justify-between items-center px-4 bg-[#000000] border-t border-[#46484d]/15 z-50">
+<div class="flex items-center gap-4">
+<p class="font-mono text-[10px] uppercase tracking-widest text-[#aaabb0]">
+                    系统就绪 | CPU: <span class="text-[#2db7f2]">12%</span> | MEM: <span class="text-[#2db7f2]">4.2GB</span>
+</p>
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_5px_rgba(45,183,242,0.8)]"></div>
+<span class="font-mono text-[10px] uppercase tracking-widest text-secondary">远程连接中</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<a class="font-mono text-[10px] uppercase tracking-widest text-[#aaabb0] hover:text-[#f6f6fc] transition-colors" href="#">Node v20.1</a>
+<a class="font-mono text-[10px] uppercase tracking-widest text-[#aaabb0] hover:text-[#f6f6fc] transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-[10px]">account_tree</span>
+                    Git Main
+                </a>
+<span class="font-mono text-[10px] uppercase tracking-widest text-[#aaabb0]">UTF-8</span>
+</div>
+</footer>
+</main>
+<div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10"></div>
+<div class="fixed bottom-0 right-0 w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full pointer-events-none -z-10"></div>
+<script>
+    // Simple toggle logic for the prototype
+    const leftSidebar = document.getElementById('left-sidebar');
+    const mainContent = document.getElementById('main-content');
+    const rightSidebar = document.getElementById('right-ai-sidebar');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+    const toggleAiSidebarBtn = document.getElementById('toggle-ai-sidebar');
+
+    let leftVisible = true;
+    let rightVisible = true;
+
+    toggleSidebarBtn.addEventListener('click', () => {
+        leftVisible = !leftVisible;
+        if (leftVisible) {
+            leftSidebar.style.transform = 'translateX(0)';
+            mainContent.style.marginLeft = '256px';
+        } else {
+            leftSidebar.style.transform = 'translateX(-100%)';
+            mainContent.style.marginLeft = '0';
+        }
+    });
+
+    toggleAiSidebarBtn.addEventListener('click', () => {
+        rightVisible = !rightVisible;
+        rightSidebar.style.display = rightVisible ? 'flex' : 'none';
+    });
+</script>
+</body></html>

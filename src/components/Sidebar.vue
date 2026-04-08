@@ -4,172 +4,84 @@
     <div class="sidebar-header">
       <div class="logo" @click="isCollapsed && toggleCollapse()" role="banner">
         <div class="logo-icon" aria-hidden="true">
-          <div class="logo-shine"></div>
+          <svg class="logo-svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 17h6v2H4v-2zm13-9h-10v2h10V8zm0 4H8v2h9v-2zM7 8H4v2h3V8zm0 4H4v2h3v-2z"/>
+            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z" opacity="0.3"/>
+          </svg>
         </div>
-        <Transition name="logo-text">
-          <div class="logo-text" v-if="!isCollapsed">
-            神经<span class="logo-accent">终端</span>
-          </div>
-        </Transition>
+        <div class="logo-text" v-if="!isCollapsed">
+          <h2 class="logo-title">架构师</h2>
+          <p class="logo-subtitle">管理员模式</p>
+        </div>
       </div>
-      <!-- 折叠按钮 -->
-      <button
-        class="collapse-btn"
-        @click="toggleCollapse"
-        :aria-label="isCollapsed ? '展开侧边栏' : '折叠侧边栏'"
-        :aria-expanded="!isCollapsed"
-      >
-        <i class="iconfont" :class="isCollapsed ? 'icon-expand' : 'icon-collapse'" aria-hidden="true"></i>
-      </button>
     </div>
 
-    <!-- 导航菜单 - 按优先级排序 -->
+    <!-- 导航菜单 -->
     <nav class="nav-menu" role="menubar" aria-label="主导航菜单">
-      <!-- 核心功能 -->
-      <div class="nav-section core" role="group" aria-label="核心功能">
+      <!-- 核心工具 -->
+      <div class="nav-section" role="group" aria-label="核心工具">
+        <div class="section-label" v-if="!isCollapsed">核心工具</div>
         <button
-          v-for="(item, index) in coreItems"
+          v-for="(item) in navItems"
           :key="item.id"
-          class="nav-item core-item"
-          :class="{ active: activeTab === item.id, 'ai-core': item.isAI }"
+          class="nav-item"
+          :class="{ active: activeTab === item.id }"
           role="menuitem"
           :aria-label="item.label"
           :aria-current="activeTab === item.id ? 'page' : undefined"
-          :tabindex="activeTab === item.id ? 0 : -1"
           @click="$emit('tab-change', item.id)"
-          @keydown="handleNavKeydown($event, index, coreItems.length, 'core')"
-          @mouseenter="hoveredItem = item.id"
-          @mouseleave="hoveredItem = null"
         >
-          <div class="nav-indicator" :class="{ ai: item.isAI }" v-if="activeTab === item.id" aria-hidden="true"></div>
-          <div class="nav-icon-wrapper" :class="{ 'ai-icon': item.isAI }">
-            <i class="iconfont nav-icon" :class="item.icon" aria-hidden="true"></i>
+          <div class="nav-icon-wrapper">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-if="item.icon === 'dns'">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-else-if="item.icon === 'terminal'">
+              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/>
+              <path d="M6 9l4 3-4 3V9zm6 7h6v-1h-6v1z"/>
+            </svg>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-else-if="item.icon === 'smart_toy'">
+              <path d="M19.98 11.62c.01-.09.02-.18.02-.28V7c0-1.1-.9-2-2-2h-4.52L12 2l-2 3H6c-1.1 0-2 .9-2 2v4c0 .1.01.19.02.28C2.55 12.1 1 13.88 1 16c0 2.76 2.24 5 5 5 1.36 0 2.6-.55 3.5-1.44.9.89 2.14 1.44 3.5 1.44s2.6-.55 3.5-1.44c.9.89 2.14 1.44 3.5 1.44 2.76 0 5-2.24 5-5 0-2.12-1.55-3.9-3.52-4.38zM6 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6 5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+            </svg>
           </div>
           <Transition name="nav-label">
-            <div class="nav-content" v-if="!isCollapsed">
-              <span class="nav-label">{{ item.label }}</span>
-              <span class="nav-desc">{{ item.desc }}</span>
-            </div>
-          </Transition>
-          <Transition name="tooltip">
-            <div class="nav-tooltip" :class="{ ai: item.isAI }" v-if="isCollapsed && hoveredItem === item.id" role="tooltip">
-              {{ item.label }}
-            </div>
+            <span class="nav-label" v-if="!isCollapsed">{{ item.label }}</span>
           </Transition>
         </button>
       </div>
-
-      <!-- 辅助功能 -->
-      <Transition name="section-fade">
-        <div class="nav-section secondary" v-if="!isCollapsed" role="group" aria-label="连接功能">
-          <div class="section-label" id="secondary-label">连接</div>
-          <button
-            v-for="(item, index) in secondaryItems"
-            :key="item.id"
-            class="nav-item secondary-item"
-            :class="{ active: activeTab === item.id }"
-            role="menuitem"
-            :aria-label="item.label + (item.id === 'ssh' && sshCount > 0 ? `, ${sshCount} 个连接` : '')"
-            :aria-current="activeTab === item.id ? 'page' : undefined"
-            :aria-describedby="item.id === 'ssh' && sshCount > 0 ? 'ssh-count' : undefined"
-            :tabindex="activeTab === item.id ? 0 : -1"
-            @click="$emit('tab-change', item.id)"
-            @keydown="handleNavKeydown($event, index, secondaryItems.length, 'secondary')"
-            @mouseenter="hoveredItem = item.id"
-            @mouseleave="hoveredItem = null"
-          >
-            <div class="nav-indicator" v-if="activeTab === item.id" aria-hidden="true"></div>
-            <div class="nav-icon-wrapper">
-              <i class="iconfont nav-icon" :class="item.icon" aria-hidden="true"></i>
-              <div class="connection-count" v-if="item.id === 'ssh' && sshCount > 0" id="ssh-count" aria-label="SSH 连接数">
-                {{ sshCount }}
-              </div>
-            </div>
-            <div class="nav-content">
-              <span class="nav-label">{{ item.label }}</span>
-            </div>
-          </button>
-        </div>
-      </Transition>
     </nav>
 
-    <!-- 底部 AI 状态卡片 -->
-    <div class="sidebar-footer">
-      <!-- 展开状态：AI 状态卡片 -->
-      <Transition name="ai-card">
-        <div class="ai-card" v-if="!isCollapsed">
-          <div class="ai-card-header">
-            <div class="ai-status-indicator" :class="aiReady ? 'ready' : 'offline'"></div>
-            <span class="ai-card-title">AI 引擎</span>
-            <button class="ai-switch-btn" @click="showModelSelector = !showModelSelector">
-              <i class="iconfont icon-switch"></i>
-            </button>
-          </div>
-          <div class="ai-card-body">
-            <div class="ai-model-info">
-              <span class="ai-model-name">{{ aiModel || '未配置' }}</span>
-              <span class="ai-status-text" :class="aiReady ? 'ready' : 'offline'">
-                {{ aiReady ? '运行中' : '离线' }}
-              </span>
-            </div>
-            <div class="ai-stats" v-if="aiReady">
-              <div class="stat-item">
-                <span class="stat-label">响应</span>
-                <span class="stat-value">{{ avgResponseTime }}ms</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">请求</span>
-                <span class="stat-value">{{ requestCount }}</span>
-              </div>
-            </div>
-          </div>
-          <!-- 快捷操作 -->
-          <div class="ai-card-actions">
-            <button class="ai-action-btn" @click="$emit('tab-change', 'settings')">
-              <i class="iconfont icon-settings"></i>
-              <span>配置</span>
-            </button>
-            <button class="ai-action-btn primary" @click="$emit('tab-change', 'assistant')">
-              <i class="iconfont icon-ai"></i>
-              <span>对话</span>
-            </button>
-          </div>
-        </div>
-      </Transition>
-
-      <!-- 折叠状态 -->
-      <Transition name="ai-card">
-        <div class="ai-mini" v-if="isCollapsed">
-          <div class="ai-mini-icon" :class="aiReady ? 'ready' : 'offline'">
-            <i class="iconfont icon-ai"></i>
-          </div>
-          <div class="ai-mini-tooltip">
-            <span>{{ aiReady ? 'AI 运行中' : 'AI 离线' }}</span>
-            <span class="ai-mini-model">{{ aiModel }}</span>
-          </div>
-        </div>
-      </Transition>
-
-      <!-- 系统管理 - 设置入口 -->
-      <Transition name="settings-fade">
-        <div class="system-actions" v-if="!isCollapsed">
-          <button class="system-btn" @click="$emit('tab-change', 'settings')">
-            <i class="iconfont icon-settings"></i>
-          </button>
-          <button class="system-btn">
-            <i class="iconfont icon-help"></i>
-          </button>
-        </div>
-      </Transition>
+    <!-- 底部操作 -->
+    <div class="sidebar-footer" v-if="!isCollapsed">
+      <button class="footer-item" @click="$emit('tab-change', 'help')">
+        <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+        </svg>
+        <span>帮助</span>
+      </button>
+      <button class="footer-item" @click="$emit('tab-change', 'status')">
+        <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+        </svg>
+        <span>状态</span>
+      </button>
     </div>
+
+    <!-- 折叠按钮 -->
+    <button
+      class="collapse-btn"
+      @click="toggleCollapse"
+      :aria-label="isCollapsed ? '展开侧边栏' : '折叠侧边栏'"
+    >
+      <svg class="collapse-icon" viewBox="0 0 24 24" fill="currentColor" :style="{ transform: isCollapsed ? 'rotate(180deg)' : 'none' }">
+        <path d="M11 17l-5-5 5-5v10zm7 0l-5-5 5-5v10z"/>
+      </svg>
+    </button>
   </aside>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
-import { aiService } from '../utils/ai'
-import { useResponsive } from '../utils/useResponsive'
-import { layoutState, initLayout, setSidebarCollapsed } from '../utils/layoutStore'
+import { ref, computed } from 'vue'
+import { layoutState, setSidebarCollapsed } from '../utils/layoutStore'
 
 const props = defineProps({
   activeTab: {
@@ -184,292 +96,110 @@ const props = defineProps({
 
 const emit = defineEmits(['tab-change'])
 
-// 响应式布局
-const responsive = useResponsive()
-
-// 用户手动折叠状态（优先级高于响应式）
-const manualCollapsed = ref(false)
-
 // 计算实际折叠状态
 const isCollapsed = computed(() => {
-  // 如果用户手动折叠，使用手动状态
-  if (manualCollapsed.value) return true
-  // 否则根据响应式布局决定
-  return responsive.shouldCollapseSidebar.value
+  return layoutState.value.sidebarCollapsed
 })
 
-const hoveredItem = ref(null)
-const aiModel = ref('')
-const aiReady = ref(false)
-const showModelSelector = ref(false)
-const avgResponseTime = ref(120)
-const requestCount = ref(0)
-
 const toggleCollapse = () => {
-  manualCollapsed.value = !manualCollapsed.value
-  setSidebarCollapsed(manualCollapsed.value)
+  setSidebarCollapsed(!layoutState.value.sidebarCollapsed)
 }
 
-// 键盘导航处理
-const handleNavKeydown = (event, index, total, section) => {
-  const items = section === 'core' ? coreItems.value : secondaryItems.value
-  let nextIndex = index
-
-  switch (event.key) {
-    case 'ArrowDown':
-    case 'ArrowRight':
-      nextIndex = (index + 1) % total
-      event.preventDefault()
-      break
-    case 'ArrowUp':
-    case 'ArrowLeft':
-      nextIndex = (index - 1 + total) % total
-      event.preventDefault()
-      break
-    case 'Home':
-      nextIndex = 0
-      event.preventDefault()
-      break
-    case 'End':
-      nextIndex = total - 1
-      event.preventDefault()
-      break
-    case 'Enter':
-    case ' ':
-      event.preventDefault()
-      emit('tab-change', items[index].id)
-      return
-    default:
-      return
-  }
-
-  // 聚焦下一个元素
-  const menuItems = event.currentTarget.parentElement.querySelectorAll('[role="menuitem"]')
-  if (menuItems[nextIndex]) {
-    menuItems[nextIndex].focus()
-  }
-}
-
-// 核心功能（高频入口）
-const coreItems = ref([
-  {
-    id: 'terminal',
-    label: '智能终端',
-    icon: 'icon-terminal',
-    desc: '命令执行 · AI 增强',
-    isAI: true
-  },
-  {
-    id: 'assistant',
-    label: 'AI 助手',
-    icon: 'icon-assistant',
-    desc: '自然语言交互',
-    isAI: true
-  }
-])
-
-// 辅助功能
-const secondaryItems = ref([
+// 导航项
+const navItems = ref([
   {
     id: 'ssh',
     label: 'SSH 连接',
-    icon: 'icon-ssh'
+    icon: 'dns'
+  },
+  {
+    id: 'terminal',
+    label: '本地终端',
+    icon: 'terminal'
   }
 ])
-
-// 加载 AI 配置和布局设置
-onMounted(async () => {
-  initLayout()
-  const settings = await aiService.waitForSettings()
-  aiModel.value = settings.model || ''
-  aiReady.value = aiService.isConfigured()
-
-  // 恢复用户的折叠偏好
-  manualCollapsed.value = layoutState.value.sidebarCollapsed
-})
 </script>
 
 <style scoped>
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 200px;
-  min-width: 200px;
-  background: var(--color-bg-base, #0a0a0f);
-  border-right: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.05));
-  padding: 16px 10px;
-  transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-              min-width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-              padding 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  position: relative;
+  width: 256px;
+  min-width: 256px;
+  height: 100vh;
+  background: rgba(17, 19, 24, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 24px 16px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
 }
 
 .sidebar.collapsed {
-  width: 56px;
-  min-width: 56px;
-  padding: 16px 6px;
-}
-
-/* 折叠过渡动画增强 */
-.sidebar::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(180deg,
-    rgba(139, 92, 246, 0) 0%,
-    rgba(139, 92, 246, 0.15) 50%,
-    rgba(139, 92, 246, 0) 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.sidebar:hover::after {
-  opacity: 0.6;
+  width: 72px;
+  min-width: 72px;
+  padding: 24px 12px;
 }
 
 /* ========== Header ========== */
 .sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 32px;
+  padding-left: 8px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  cursor: pointer;
 }
 
 .logo-icon {
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #00f0ff 100%);
-  border-radius: 7px;
-  position: relative;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
-  overflow: hidden;
-}
-
-.logo-shine {
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.25), transparent);
-  transform: rotate(45deg);
-  animation: shine 3s ease-in-out infinite;
-}
-
-@keyframes shine {
-  0%, 100% { transform: translateX(-50%) rotate(45deg); }
-  50% { transform: translateX(50%) rotate(45deg); }
-}
-
-.logo-text {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-text-primary, #f5f5f7);
-  letter-spacing: -0.3px;
-}
-
-.logo-accent {
-  background: linear-gradient(135deg, #8b5cf6 0%, #00f0ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.collapse-btn {
-  min-width: 44px;
-  min-height: 44px;
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.06));
-  border-radius: 8px;
-  color: var(--color-text-tertiary, #6b6b78);
-  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--color-primary, #b79fff) 0%, var(--color-primary-container, #ab8ffe) 100%);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  position: relative;
-  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(183, 159, 255, 0.2);
 }
 
-/* Hover 状态 - 更明显的视觉反馈 */
-.collapse-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 240, 255, 0.1) 100%);
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  border-radius: 5px;
+.logo-svg {
+  width: 24px;
+  height: 24px;
+  color: var(--color-on-primary, #361083);
 }
 
-.collapse-btn:hover::before {
-  opacity: 1;
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.collapse-btn:hover {
-  border-color: rgba(139, 92, 246, 0.35);
-  color: #a78bfa;
-  transform: scale(1.08);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+.logo-title {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-on-surface, #f6f6fc);
+  letter-spacing: -0.3px;
+  line-height: 1;
+  margin: 0;
 }
 
-/* 活跃状态 */
-.collapse-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 1px 4px rgba(139, 92, 246, 0.15);
-}
-
-/* 图标旋转过渡动画 */
-.collapse-btn .iconfont {
-  font-size: 12px;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* 折叠状态图标动画 */
-.sidebar:not(.collapsed) .collapse-btn .iconfont {
-  transform: rotate(0deg);
-}
-
-.sidebar.collapsed .collapse-btn .iconfont {
-  transform: rotate(180deg);
-}
-
-/* 脉冲发光动画 */
-.collapse-btn:focus-visible {
-  outline: 2px solid rgba(139, 92, 246, 0.5);
-  outline-offset: 2px;
-}
-
-/* 折叠状态脉冲提示 - 让用户注意到可以展开 */
-.sidebar.collapsed .collapse-btn {
-  animation: collapse-hint 2.5s ease-in-out infinite;
-}
-
-@keyframes collapse-hint {
-  0%, 100% {
-    box-shadow: 0 0 0 rgba(139, 92, 246, 0);
-    border-color: rgba(255, 255, 255, 0.06);
-  }
-  50% {
-    box-shadow: 0 0 6px rgba(139, 92, 246, 0.15);
-    border-color: rgba(139, 92, 246, 0.15);
-  }
-}
-
-/* 悬停时停止脉冲动画 */
-.sidebar.collapsed .collapse-btn:hover {
-  animation: none;
+.logo-subtitle {
+  font-family: var(--font-mono, 'Fira Code', monospace);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-secondary, #2db7f2);
+  margin: 0;
+  line-height: 1;
 }
 
 /* ========== Navigation ========== */
@@ -477,189 +207,79 @@ onMounted(async () => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
+  gap: 8px;
 }
 
 .nav-section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.nav-section.secondary {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 4px;
 }
 
 .section-label {
   font-size: 10px;
-  color: var(--color-text-disabled, #5a5a68);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 4px 12px;
-  font-weight: 500;
+  letter-spacing: 0.15em;
+  color: var(--color-on-surface-variant, #aaabb0);
+  padding: 0 12px 8px;
 }
 
 /* ========== Nav Items ========== */
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 12px;
-  min-height: 44px;
-  border-radius: 8px;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   position: relative;
-  color: var(--color-text-tertiary, #8b8b9a);
+  color: var(--color-on-surface-variant, #aaabb0);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
 }
 
 .sidebar.collapsed .nav-item {
   justify-content: center;
-  padding: 14px 8px;
+  padding: 10px;
 }
 
-/* Core items - stronger visual weight */
-.nav-item.core-item {
-  padding: 14px;
+.nav-item:hover {
+  background: rgba(29, 32, 37, 0.5);
+  color: var(--color-on-surface, #f6f6fc);
 }
 
-.nav-item.core-item:hover {
-  background: rgba(139, 92, 246, 0.08);
-  color: #c4b5fd;
+.nav-item.active {
+  background: rgba(29, 32, 37, 0.8);
+  color: var(--color-on-surface, #f6f6fc);
+  box-shadow: 0 0 10px rgba(45, 183, 242, 0.15), inset 0 0 0 1px rgba(45, 183, 242, 0.2);
 }
 
-.nav-item.core-item.active {
-  background: rgba(139, 92, 246, 0.12);
-  color: #c4b5fd;
-}
-
-.nav-item.ai-core .nav-icon-wrapper {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 240, 255, 0.1) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  border-radius: 7px;
-  width: 26px;
-  height: 26px;
-}
-
-.nav-item.ai-core .nav-icon {
-  font-size: 13px;
-  color: #a78bfa;
-}
-
-/* Secondary items - lighter visual weight */
-.nav-item.secondary-item {
-  padding: 8px 12px;
-}
-
-.nav-item.secondary-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: #b0b0b8;
-}
-
-.nav-item.secondary-item.active {
-  background: rgba(59, 130, 246, 0.08);
-  color: #93c5fd;
-}
-
-/* Indicator */
-.nav-indicator {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
-  background: linear-gradient(180deg, #8b5cf6 0%, #00f0ff 100%);
-  border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-}
-
-.nav-indicator.ai {
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
-}
-
-.sidebar.collapsed .nav-indicator {
-  left: 1px;
-  height: 18px;
-}
-
-/* Icon wrapper */
 .nav-icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  position: relative;
 }
 
 .nav-icon {
-  font-size: 15px;
-}
-
-/* Connection count badge */
-.connection-count {
-  position: absolute;
-  top: -4px;
-  right: -6px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 4px;
-  background: #28ca41;
-  border-radius: 7px;
-  font-size: 9px;
-  font-weight: 600;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Nav content */
-.nav-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
+  width: 20px;
+  height: 20px;
+  opacity: 0.9;
 }
 
 .nav-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.1px;
   white-space: nowrap;
-}
-
-.nav-desc {
-  font-size: 10px;
-  color: var(--color-text-disabled, #5a5a68);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Tooltip */
-.nav-tooltip {
-  position: absolute;
-  left: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--color-bg-surface, #1a1a24);
-  color: var(--color-text-primary, #e5e5e7);
-  padding: 5px 10px;
-  border-radius: 5px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.3));
-  z-index: var(--z-tooltip, 6000);
-  pointer-events: none;
+  font-family: var(--font-body, 'Inter', sans-serif);
 }
 
 /* ========== Footer ========== */
@@ -667,314 +287,82 @@ onMounted(async () => {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(70, 72, 77, 0.15);
 }
 
-/* AI Status Card */
-.ai-card {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(0, 240, 255, 0.05) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 10px;
-  padding: 10px;
-}
-
-.ai-card-header {
+.footer-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.ai-status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.ai-status-indicator.ready {
-  background: #28ca41;
-  box-shadow: 0 0 8px rgba(40, 202, 65, 0.6);
-  animation: pulse-ready 2s ease-in-out infinite;
-}
-
-.ai-status-indicator.offline {
-  background: var(--color-text-tertiary, #6b6b78);
-}
-
-@keyframes pulse-ready {
-  0%, 100% { box-shadow: 0 0 6px rgba(40, 202, 65, 0.5); }
-  50% { box-shadow: 0 0 10px rgba(40, 202, 65, 0.7); }
-}
-
-.ai-card-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-primary, #e5e5e7);
-  flex: 1;
-}
-
-.ai-switch-btn {
-  min-width: 44px;
-  min-height: 44px;
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
-  border-radius: 8px;
-  color: var(--color-text-tertiary, #8b8b9a);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.ai-switch-btn:hover {
-  background: rgba(139, 92, 246, 0.15);
-  color: #a78bfa;
-  border-color: rgba(139, 92, 246, 0.3);
-}
-
-.ai-switch-btn .iconfont {
-  font-size: 11px;
-}
-
-.ai-card-body {
-  margin-bottom: 8px;
-}
-
-.ai-model-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.ai-model-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: #c4b5fd;
-}
-
-.ai-status-text {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.ai-status-text.ready {
-  background: rgba(40, 202, 65, 0.15);
-  color: #28ca41;
-}
-
-.ai-status-text.offline {
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.05));
-  color: var(--color-text-tertiary, #6b6b78);
-}
-
-.ai-stats {
-  display: flex;
   gap: 12px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.stat-label {
-  font-size: 9px;
-  color: var(--color-text-tertiary, #6b6b78);
-}
-
-.stat-value {
-  font-size: 10px;
-  font-weight: 600;
-  color: #a78bfa;
-}
-
-.ai-card-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.ai-action-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 6px;
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08));
-  border-radius: 6px;
-  color: var(--color-text-tertiary, #8b8b9a);
-  font-size: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  color: var(--color-on-surface-variant, #aaabb0);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  font-size: 13px;
 }
 
-.ai-action-btn:hover {
-  background: var(--color-bg-active, rgba(255, 255, 255, 0.08));
-  color: var(--color-text-secondary, #b0b0b8);
+.footer-item:hover {
+  color: var(--color-on-surface, #f6f6fc);
 }
 
-.ai-action-btn.primary {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: rgba(139, 92, 246, 0.25);
-  color: #c4b5fd;
+.footer-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.8;
 }
 
-.ai-action-btn.primary:hover {
-  background: rgba(139, 92, 246, 0.2);
-}
-
-.ai-action-btn .iconfont {
-  font-size: 11px;
-}
-
-/* AI Mini (collapsed state) */
-.ai-mini {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.ai-mini-icon {
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.ai-mini-icon.ready {
-  background: rgba(139, 92, 246, 0.15);
-  border: 1px solid rgba(139, 92, 246, 0.25);
-}
-
-.ai-mini-icon.offline {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.ai-mini-icon .iconfont {
-  font-size: 14px;
-  color: #a78bfa;
-}
-
-.ai-mini-icon:hover .ai-mini-tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-.ai-mini-tooltip {
+/* ========== Collapse Button ========== */
+.collapse-btn {
   position: absolute;
-  left: calc(100% + 10px);
+  right: -12px;
   top: 50%;
   transform: translateY(-50%);
-  background: var(--color-bg-surface, #1a1a24);
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 10px;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  z-index: var(--z-tooltip, 6000);
-}
-
-.ai-mini-tooltip span:first-child {
-  color: var(--color-text-primary, #e5e5e7);
-  font-weight: 500;
-}
-
-.ai-mini-model {
-  color: #a78bfa;
-}
-
-/* System Actions */
-.system-actions {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.system-btn {
-  min-width: 44px;
-  min-height: 44px;
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.05));
-  border-radius: 8px;
-  color: var(--color-text-tertiary, #6b6b78);
-  cursor: pointer;
+  width: 24px;
+  height: 48px;
+  background: rgba(35, 38, 44, 0.8);
+  border: 1px solid rgba(70, 72, 77, 0.3);
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  cursor: pointer;
+  color: var(--color-on-surface-variant, #aaabb0);
+  transition: all 0.15s ease;
+  opacity: 0;
 }
 
-.system-btn:hover {
-  background: var(--color-bg-active, rgba(255, 255, 255, 0.06));
-  color: var(--color-text-secondary, #a0a0a8);
+.sidebar:hover .collapse-btn {
+  opacity: 1;
 }
 
-.system-btn .iconfont {
-  font-size: 12px;
+.collapse-btn:hover {
+  background: rgba(45, 183, 242, 0.1);
+  border-color: rgba(45, 183, 242, 0.3);
+  color: var(--color-secondary, #2db7f2);
+}
+
+.collapse-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
 }
 
 /* ========== Transitions ========== */
-.logo-text-enter-active,
-.logo-text-leave-active,
 .nav-label-enter-active,
 .nav-label-leave-active {
   transition: all 0.2s ease;
 }
 
-.logo-text-enter-from,
-.logo-text-leave-to,
 .nav-label-enter-from,
 .nav-label-leave-to {
   opacity: 0;
   transform: translateX(-6px);
-}
-
-.tooltip-enter-active,
-.tooltip-leave-active {
-  transition: all 0.15s ease;
-}
-
-.tooltip-enter-from,
-.tooltip-leave-to {
-  opacity: 0;
-  transform: translateY(-50%) translateX(-4px);
-}
-
-.section-fade-enter-active,
-.section-fade-leave-active,
-.ai-card-enter-active,
-.ai-card-leave-active,
-.settings-fade-enter-active,
-.settings-fade-leave-active {
-  transition: all 0.2s ease;
-}
-
-.section-fade-enter-from,
-.section-fade-leave-to,
-.ai-card-enter-from,
-.ai-card-leave-to,
-.settings-fade-enter-from,
-.settings-fade-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
 }
 </style>

@@ -169,7 +169,9 @@ onMounted(async () => {
     letterSpacing: 0.5,
     lineHeight: 1.2,
     // 确保正确处理 ANSI 颜色转义序列
-    convertEol: true
+    convertEol: true,
+    // 允许透明背景
+    allowTransparency: true
   })
 
   // 添加插件
@@ -670,10 +672,12 @@ function processSimulatedCommand(cmd: string) {
 .terminal {
   width: 100%;
   height: 100%;
-  background: var(--color-bg-base, #0f0f14);
   padding: 0;
   margin: 0;
   overflow: hidden;
+  box-shadow: var(--terminal-glow);
+  /* 让 xterm 自己控制背景色 */
+  background: transparent;
 }
 
 /* 空态引导层 */
@@ -686,8 +690,8 @@ function processSimulatedCommand(cmd: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 10, 15, 0.92);
-  backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: var(--blur-md, blur(20px));
   z-index: 10;
   cursor: pointer;
 }
@@ -704,7 +708,7 @@ function processSimulatedCommand(cmd: string) {
 /* Logo - 入场动画 */
 .guide-logo {
   margin-bottom: 20px;
-  animation: logo-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: logo-enter 400ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
   opacity: 0;
   transform: scale(0.8) translateY(20px);
 }
@@ -719,39 +723,10 @@ function processSimulatedCommand(cmd: string) {
 .guide-logo .logo-icon {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 50%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   border-radius: 14px;
   position: relative;
-  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.25);
-  overflow: hidden;
-}
-
-.guide-logo .logo-shine {
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.25), transparent);
-  transform: rotate(45deg);
-  animation: shine 3s ease-in-out infinite;
-}
-
-@keyframes shine {
-  0%, 100% { transform: translateX(-50%) rotate(45deg); }
-  50% { transform: translateX(50%) rotate(45deg); }
-}
-
-.guide-logo .logo-icon::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
-  border-radius: 5px;
+  box-shadow: var(--shadow-primary);
 }
 
 /* 标题 - 交错入场 */
@@ -761,16 +736,16 @@ function processSimulatedCommand(cmd: string) {
   color: var(--color-text-primary, #f5f5f7);
   margin-bottom: 6px;
   letter-spacing: -0.3px;
-  animation: text-enter 0.5s ease 0.1s forwards;
+  animation: text-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 100ms forwards;
   opacity: 0;
   transform: translateY(10px);
 }
 
 .guide-subtitle {
   font-size: 13px;
-  color: var(--color-text-tertiary, #6b6b78);
+  color: var(--color-text-tertiary, #6e6e73);
   margin-bottom: 24px;
-  animation: text-enter 0.5s ease 0.15s forwards;
+  animation: text-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 150ms forwards;
   opacity: 0;
   transform: translateY(10px);
 }
@@ -786,9 +761,9 @@ function processSimulatedCommand(cmd: string) {
 .guide-divider {
   width: 100%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-border-default, rgba(255, 255, 255, 0.08)), transparent);
+  background: linear-gradient(90deg, transparent, var(--color-border-default, rgba(255, 255, 255, 0.12)), transparent);
   margin-bottom: 24px;
-  animation: divider-enter 0.5s ease 0.2s forwards;
+  animation: divider-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 200ms forwards;
   opacity: 0;
   transform: scaleX(0);
 }
@@ -814,19 +789,19 @@ function processSimulatedCommand(cmd: string) {
   align-items: center;
   gap: 14px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  transition: all 0.2s ease;
+  background: var(--color-bg-surface, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 10px);
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   text-align: left;
-  animation: action-enter 0.4s ease forwards;
+  animation: action-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
   opacity: 0;
   transform: translateX(-20px);
 }
 
-.action-item:nth-child(1) { animation-delay: 0.25s; }
-.action-item:nth-child(2) { animation-delay: 0.3s; }
-.action-item:nth-child(3) { animation-delay: 0.35s; }
+.action-item:nth-child(1) { animation-delay: 250ms; }
+.action-item:nth-child(2) { animation-delay: 300ms; }
+.action-item:nth-child(3) { animation-delay: 350ms; }
 
 @keyframes action-enter {
   to {
@@ -836,8 +811,8 @@ function processSimulatedCommand(cmd: string) {
 }
 
 .action-item:hover {
-  background: rgba(0, 240, 255, 0.05);
-  border-color: rgba(0, 240, 255, 0.12);
+  background: var(--color-bg-elevated, rgba(255, 255, 255, 0.08));
+  border-color: var(--color-border-default, rgba(255, 255, 255, 0.12));
   transform: translateX(4px);
 }
 
@@ -847,28 +822,28 @@ function processSimulatedCommand(cmd: string) {
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: rgba(0, 240, 255, 0.08);
-  border-radius: 8px;
+  background: rgba(183, 159, 255, 0.1);
+  border-radius: var(--radius-md, 10px);
   flex-shrink: 0;
 }
 
 .action-icon i {
   font-size: 16px;
-  color: var(--color-brand-primary, #00f0ff);
+  color: var(--color-primary);
 }
 
 .action-icon.ai {
-  background: rgba(139, 92, 246, 0.12);
+  background: rgba(255, 134, 195, 0.1);
 }
 
 .action-icon.ai i {
-  color: var(--color-brand-accent, #8b5cf6);
+  color: var(--color-tertiary);
 }
 
 .action-icon .key-badge {
   font-size: 10px;
   font-weight: 600;
-  color: var(--color-brand-primary, #00f0ff);
+  color: var(--color-primary);
   letter-spacing: 0.3px;
 }
 
@@ -881,12 +856,12 @@ function processSimulatedCommand(cmd: string) {
 .action-title {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-primary, #e5e5e7);
+  color: var(--color-text-primary, #f5f5f7);
 }
 
 .action-desc {
   font-size: 11px;
-  color: var(--color-text-tertiary, #6b6b78);
+  color: var(--color-text-tertiary, #6e6e73);
 }
 
 /* 快捷键 - 入场动画 */
@@ -896,7 +871,7 @@ function processSimulatedCommand(cmd: string) {
   justify-content: center;
   gap: 12px;
   margin-bottom: 24px;
-  animation: shortcuts-enter 0.5s ease 0.4s forwards;
+  animation: shortcuts-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 400ms forwards;
   opacity: 0;
 }
 
@@ -911,24 +886,24 @@ function processSimulatedCommand(cmd: string) {
   align-items: center;
   gap: 5px;
   font-size: 10px;
-  color: var(--color-text-tertiary, #6b6b78);
+  color: var(--color-text-tertiary, #6e6e73);
 }
 
 .shortcut kbd {
   padding: 2px 5px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-bg-surface, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.12));
   border-radius: 3px;
   font-size: 9px;
   font-family: inherit;
-  color: var(--color-text-secondary, #9b9ba5);
+  color: var(--color-text-secondary, #a1a1a6);
 }
 
 /* 提示 */
 .guide-hint {
   font-size: 11px;
-  color: var(--color-text-disabled, #5a5a68);
-  animation: hint-enter 0.5s ease 0.5s forwards;
+  color: var(--color-text-disabled, #48484a);
+  animation: hint-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 500ms forwards;
   opacity: 0;
 }
 
@@ -940,11 +915,11 @@ function processSimulatedCommand(cmd: string) {
 
 /* 引导层动画 */
 .guide-fade-enter-active {
-  transition: all 0.3s ease;
+  transition: all 250ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .guide-fade-leave-active {
-  transition: all 0.25s ease;
+  transition: all 200ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .guide-fade-enter-from,
@@ -985,7 +960,7 @@ function processSimulatedCommand(cmd: string) {
   margin: 0 !important;
 }
 
-/* 自定义滚动条样式 - 使用 CSS 变量 */
+/* 自定义滚动条样式 */
 .terminal :deep(.xterm-viewport::-webkit-scrollbar) {
   width: 6px;
 }
@@ -995,13 +970,13 @@ function processSimulatedCommand(cmd: string) {
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: var(--color-border-default, rgba(255, 255, 255, 0.08));
+  background: var(--color-border-default, rgba(255, 255, 255, 0.12));
   border-radius: 3px;
-  transition: background 0.2s ease;
+  transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
-  background: var(--color-brand-primary, #00f0ff);
+  background: var(--color-secondary);
 }
 
 /* 滚动条角落 */
