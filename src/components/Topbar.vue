@@ -1,7 +1,14 @@
 <template>
   <header class="topbar">
-    <!-- 左侧：留白（窗口控制区域） -->
-    <div class="topbar-left"></div>
+    <!-- 左侧：Logo（仅 Windows） -->
+    <div class="topbar-left" :class="{ 'mac-logo': isMac }">
+      <div v-if="!isMac" class="logo">
+        <div class="logo-icon">
+          <img src="/icon.png" alt="Logo" class="logo-img" />
+        </div>
+        <span class="logo-text">终端MVP</span>
+      </div>
+    </div>
 
     <!-- 右侧：工具栏 -->
     <div class="topbar-right">
@@ -37,8 +44,8 @@
         </div>
       </div>
 
-      <!-- 窗口控制按钮 -->
-      <div class="window-controls">
+      <!-- 窗口控制按钮（仅 Windows） -->
+      <div v-if="isWindows" class="window-controls">
         <button class="window-btn minimize" @click="minimizeWindow" title="最小化">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 14H4v-2h16v2z"/>
@@ -68,41 +75,24 @@ import { toggleSidebarCollapsed, toggleAssistantPanel } from '../utils/layoutSto
 
 const emit = defineEmits(['open-settings', 'open-palette', 'new-session', 'switch-tab'])
 
+// 检测平台
+const platform = ref('unknown')
+const isMac = ref(false)
+const isWindows = ref(false)
+
 // 窗口最大化状态
 const isMaximized = ref(false)
 let stateListenerId: number | null = null
 
-// 切换侧边栏
-const toggleSidebar = () => {
-  toggleSidebarCollapsed()
-}
-
-// 切换AI面板
-const toggleAiPanel = () => {
-  toggleAssistantPanel()
-}
-
-// 窗口控制函数
-const minimizeWindow = async () => {
-  if (window.electronAPI?.windowMinimize) {
-    await window.electronAPI.windowMinimize()
-  }
-}
-
-const maximizeWindow = async () => {
-  if (window.electronAPI?.windowMaximize) {
-    await window.electronAPI.windowMaximize()
-  }
-}
-
-const closeWindow = async () => {
-  if (window.electronAPI?.windowClose) {
-    await window.electronAPI.windowClose()
-  }
-}
-
-// 监听窗口状态变化
 onMounted(async () => {
+  // 获取平台信息
+  if (window.electronAPI?.getPlatform) {
+    const plat = await window.electronAPI.getPlatform()
+    platform.value = plat
+    isMac.value = plat === 'darwin'
+    isWindows.value = plat === 'win32'
+  }
+
   // 获取初始窗口状态
   if (window.electronAPI?.isMaximized) {
     isMaximized.value = await window.electronAPI.isMaximized()
@@ -122,6 +112,35 @@ onUnmounted(() => {
     window.electronAPI.removeWindowStateListener(stateListenerId)
   }
 })
+
+// 切换侧边栏
+const toggleSidebar = () => {
+  toggleSidebarCollapsed()
+}
+
+// 切换AI面板
+const toggleAiPanel = () => {
+  toggleAssistantPanel()
+}
+
+// 窗口控制函数（仅 Windows）
+const minimizeWindow = async () => {
+  if (window.electronAPI?.windowMinimize) {
+    await window.electronAPI.windowMinimize()
+  }
+}
+
+const maximizeWindow = async () => {
+  if (window.electronAPI?.windowMaximize) {
+    await window.electronAPI.windowMaximize()
+  }
+}
+
+const closeWindow = async () => {
+  if (window.electronAPI?.windowClose) {
+    await window.electronAPI.windowClose()
+  }
+}
 </script>
 
 <style scoped>
@@ -144,6 +163,46 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   align-items: center;
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 8px;
+}
+
+/* Mac 系统下 Logo 向右偏移，给系统按钮留空间 */
+.topbar-left.mac-logo .logo {
+  margin-left: 72px;
+}
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--color-primary, #b79fff) 0%, var(--color-primary-container, #ab8ffe) 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 15px rgba(183, 159, 255, 0.2);
+}
+
+.logo-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.logo-text {
+  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface, #f6f6fc);
+  letter-spacing: -0.2px;
 }
 
 /* ========== 右侧区域 ========== */

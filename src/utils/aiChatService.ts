@@ -1,5 +1,5 @@
 // AI 对话服务 - 支持多提供商 API 调用 (通过主进程代理)
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { AIModelConfig } from './aiModelsStore'
 import { addMessageToSession, currentSession, clearCurrentSession } from './chatSessionStore'
 
@@ -26,6 +26,37 @@ let currentProvider: string = ''
 // 生成唯一 ID
 const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+// 加载聊天记录
+export const loadChatHistory = async () => {
+  try {
+    if (window.electronAPI?.getAIChatHistory) {
+      const result = await window.electronAPI.getAIChatHistory()
+      if (result.success && result.data && Array.isArray(result.data)) {
+        chatMessages.value = result.data as ChatMessage[]
+        console.log('[AI Chat] Loaded chat history:', result.data.length, 'messages')
+      }
+    }
+  } catch (error) {
+    console.error('[AI Chat] Failed to load chat history:', error)
+  }
+}
+
+// 保存聊天记录
+export const saveChatHistory = async () => {
+  try {
+    if (window.electronAPI?.saveAIChatHistory) {
+      await window.electronAPI.saveAIChatHistory(chatMessages.value)
+    }
+  } catch (error) {
+    console.error('[AI Chat] Failed to save chat history:', error)
+  }
+}
+
+// 监听消息变化自动保存
+watch(chatMessages, () => {
+  saveChatHistory()
+}, { deep: true })
+
 // 添加消息（同时添加到当前会话）
 export const addMessage = (role: 'user' | 'assistant' | 'system', content: string) => {
   const message: ChatMessage = {
@@ -45,9 +76,13 @@ export const addMessage = (role: 'user' | 'assistant' | 'system', content: strin
 }
 
 // 清空对话（同时清空当前会话）
-export const clearChat = () => {
+export const clearChat = async () => {
   chatMessages.value = []
   clearCurrentSession()
+  // 清空持久化存储
+  if (window.electronAPI?.clearAIChatHistory) {
+    await window.electronAPI.clearAIChatHistory()
+  }
 }
 
 // 解析 OpenAI 格式的流数据

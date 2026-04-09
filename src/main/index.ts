@@ -584,6 +584,11 @@ const getTerminalSettingsPath = () => {
   return path.join(userDataPath, 'terminal-settings.json')
 }
 
+const getAIChatHistoryPath = () => {
+  const userDataPath = app.getPath('userData')
+  return path.join(userDataPath, 'ai-chat-history.json')
+}
+
 // 密码加密
 ipcMain.handle('encrypt-password', (_event, password: string) => {
   try {
@@ -682,6 +687,46 @@ ipcMain.handle('save-terminal-settings', (_event, settings: unknown) => {
   try {
     const storagePath = getTerminalSettingsPath()
     fs.writeFileSync(storagePath, JSON.stringify(settings, null, 2), 'utf-8')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// ===================== AI 聊天记录持久化 =====================
+
+// 获取 AI 聊天记录
+ipcMain.handle('get-ai-chat-history', () => {
+  try {
+    const storagePath = getAIChatHistoryPath()
+    if (fs.existsSync(storagePath)) {
+      const data = fs.readFileSync(storagePath, 'utf-8')
+      return { success: true, data: JSON.parse(data) }
+    }
+    return { success: true, data: [] }
+  } catch (error) {
+    return { success: false, error: (error as Error).message, data: [] }
+  }
+})
+
+// 保存 AI 聊天记录
+ipcMain.handle('save-ai-chat-history', (_event, messages: unknown[]) => {
+  try {
+    const storagePath = getAIChatHistoryPath()
+    fs.writeFileSync(storagePath, JSON.stringify(messages, null, 2), 'utf-8')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 清空 AI 聊天记录
+ipcMain.handle('clear-ai-chat-history', () => {
+  try {
+    const storagePath = getAIChatHistoryPath()
+    if (fs.existsSync(storagePath)) {
+      fs.unlinkSync(storagePath)
+    }
     return { success: true }
   } catch (error) {
     return { success: false, error: (error as Error).message }

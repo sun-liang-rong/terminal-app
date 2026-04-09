@@ -4,9 +4,10 @@
     <div class="ai-header">
       <div class="ai-title-wrapper">
         <svg class="ai-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-          <circle cx="12" cy="10" r="2"/>
-          <path d="M12 13c-2.33 0-4.31 1.46-5.11 3.5h10.22c-.8-2.04-2.78-3.5-5.11-3.5z" opacity="0.6"/>
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.9"/>
+          <path d="M12 7v2.5M12 14.5V17M7 12h2.5M14.5 12H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         <h3 class="ai-title">AI 助手</h3>
       </div>
@@ -30,9 +31,10 @@
       <div v-if="chatMessages.length === 0" class="welcome-message">
         <div class="welcome-icon">
           <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-            <circle cx="12" cy="10" r="2"/>
-            <path d="M12 13c-2.33 0-4.31 1.46-5.11 3.5h10.22c-.8-2.04-2.78-3.5-5.11-3.5z" opacity="0.6"/>
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.9"/>
+            <path d="M12 7v2.5M12 14.5V17M7 12h2.5M14.5 12H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
         </div>
         <h4>有什么可以帮您的？</h4>
@@ -97,7 +99,8 @@ import {
   currentStreamingMessage,
   sendMessage as sendToAI,
   clearChat,
-  chatMessages
+  chatMessages,
+  loadChatHistory
 } from '../utils/aiChatService'
 import VirtualMessageList from './VirtualMessageList.vue'
 
@@ -129,8 +132,10 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const messageListRef = ref<InstanceType<typeof VirtualMessageList> | null>(null)
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
   initAIModels()
+  // 加载聊天记录
+  await loadChatHistory()
 })
 
 // 计算属性

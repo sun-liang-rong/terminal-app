@@ -75,6 +75,10 @@ interface ElectronAPI {
   // 终端设置存储相关
   getTerminalSettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
   saveTerminalSettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
+  // AI 聊天记录持久化
+  getAIChatHistory: () => Promise<{ success: boolean; data?: unknown[]; error?: string }>
+  saveAIChatHistory: (messages: unknown[]) => Promise<{ success: boolean; error?: string }>
+  clearAIChatHistory: () => Promise<{ success: boolean; error?: string }>
   // 窗口控制相关
   windowMinimize: () => Promise<{ success: boolean; error?: string }>
   windowMaximize: () => Promise<{ success: boolean; error?: string }>
@@ -196,6 +200,11 @@ const electronAPI: ElectronAPI = {
   // 终端设置存储相关
   getTerminalSettings: () => ipcRenderer.invoke('get-terminal-settings'),
   saveTerminalSettings: (settings: unknown) => ipcRenderer.invoke('save-terminal-settings', settings),
+
+  // AI 聊天记录持久化
+  getAIChatHistory: () => ipcRenderer.invoke('get-ai-chat-history'),
+  saveAIChatHistory: (messages: unknown[]) => ipcRenderer.invoke('save-ai-chat-history', messages),
+  clearAIChatHistory: () => ipcRenderer.invoke('clear-ai-chat-history'),
 
   // 窗口控制相关
   windowMinimize: () => ipcRenderer.invoke('window-minimize'),

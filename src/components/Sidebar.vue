@@ -1,7 +1,7 @@
 <template>
   <aside class="sidebar" :class="{ collapsed: isCollapsed }" role="navigation" aria-label="主导航">
-    <!-- Logo 区域 -->
-    <div class="sidebar-header">
+    <!-- Mac 下的 Logo 区域 -->
+    <div v-if="isMac" class="sidebar-header">
       <div class="logo" @click="isCollapsed && toggleCollapse()" role="banner">
         <div class="logo-icon" aria-hidden="true">
           <img src="/icon.png" alt="Logo" class="logo-img" />
@@ -41,9 +41,10 @@
             </svg>
             <!-- AI 助手图标 -->
             <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-else-if="item.icon === 'ai'">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-              <circle cx="12" cy="10" r="2"/>
-              <path d="M12 13c-2.33 0-4.31 1.46-5.11 3.5h10.22c-.8-2.04-2.78-3.5-5.11-3.5z" opacity="0.6"/>
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.9"/>
+              <path d="M12 7v2.5M12 14.5V17M7 12h2.5M14.5 12H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
           </div>
           <Transition name="nav-label">
@@ -83,7 +84,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { layoutState, setSidebarCollapsed } from '../utils/layoutStore'
 
 const props = defineProps({
@@ -98,6 +99,16 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['tab-change'])
+
+// 检测平台
+const isMac = ref(false)
+
+onMounted(async () => {
+  if (window.electronAPI?.getPlatform) {
+    const plat = await window.electronAPI.getPlatform()
+    isMac.value = plat === 'darwin'
+  }
+})
 
 // 计算实际折叠状态
 const isCollapsed = computed(() => {
@@ -133,7 +144,7 @@ const navItems = ref([
   background: rgba(17, 19, 24, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  padding: 24px 16px;
+  padding: 12px 16px 24px 16px;
   position: fixed;
   left: 0;
   top: 0;
@@ -145,65 +156,58 @@ const navItems = ref([
 .sidebar.collapsed {
   width: 72px;
   min-width: 72px;
-  padding: 24px 12px;
+  padding: 12px 12px 24px 12px;
 }
 
-/* ========== Header ========== */
+/* ========== Header (Mac Logo) ========== */
 .sidebar-header {
-  margin-bottom: 32px;
-  padding-left: 8px;
+  margin-bottom: 20px;
+  padding-left: 76px;
+  padding-top: 8px;
+  height: 38px;
+  display: flex;
+  align-items: center;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   cursor: pointer;
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
+  width: 20px;
+  height: 20px;
   background: linear-gradient(135deg, var(--color-primary, #b79fff) 0%, var(--color-primary-container, #ab8ffe) 100%);
-  border-radius: 10px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 0 20px rgba(183, 159, 255, 0.2);
 }
 
 .logo-img {
-  width: 28px;
-  height: 28px;
+  width: 14px;
+  height: 14px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 3px;
 }
 
 .logo-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .logo-title {
-  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
-  font-size: 14px;
-  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-headline, 'Space Grotesk', sans-serif);
+  font-size: 13px;
+  font-weight: 600;
   color: var(--color-on-surface, #f6f6fc);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
   line-height: 1;
   margin: 0;
-}
-
-.logo-subtitle {
-  font-family: var(--font-mono, 'Fira Code', monospace);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--color-secondary, #2db7f2);
-  margin: 0;
-  line-height: 1;
 }
 
 /* ========== Navigation ========== */

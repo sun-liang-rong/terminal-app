@@ -126,6 +126,11 @@ declare global {
       getTerminalSettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
       saveTerminalSettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
 
+      // AI 聊天记录持久化
+      getAIChatHistory: () => Promise<{ success: boolean; data?: unknown[]; error?: string }>
+      saveAIChatHistory: (messages: unknown[]) => Promise<{ success: boolean; error?: string }>
+      clearAIChatHistory: () => Promise<{ success: boolean; error?: string }>
+
       // 窗口控制相关
       windowMinimize: () => Promise<{ success: boolean; error?: string }>
       windowMaximize: () => Promise<{ success: boolean; error?: string }>

@@ -11,7 +11,7 @@ export default defineConfig({
           index: resolve(__dirname, 'src/main/index.ts')
         },
         output: {
-          format: 'cjs',
+          format: 'es',
           entryFileNames: 'index.js'
         }
       }
