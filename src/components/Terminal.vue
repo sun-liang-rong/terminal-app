@@ -186,10 +186,13 @@ onMounted(async () => {
   themeChangeListener = () => {
     if (terminal) {
       const newTheme = getCurrentTheme()
-      // 强制更新主题
-      terminal.options.theme = newTheme
-      // 刷新终端显示
-      terminal.refresh(0, terminal.rows - 1)
+      console.log('[Terminal] Theme changing to:', newTheme?.name || 'unknown')
+      // 强制更新主题 - 使用 Object.assign 确保主题对象被正确应用
+      Object.assign(terminal.options, { theme: newTheme })
+      // 刷新终端显示 - 确保 rows 有效
+      if (terminal.rows > 0) {
+        terminal.refresh(0, terminal.rows - 1)
+      }
     }
   }
   window.addEventListener('theme-change', themeChangeListener as EventListener)
@@ -215,8 +218,10 @@ onMounted(async () => {
         terminal.options.cursorStyle = value
         break
       case 'theme':
-        terminal.options.theme = getCurrentTheme()
-        terminal.refresh(0, terminal.rows - 1)
+        Object.assign(terminal.options, { theme: getCurrentTheme() })
+        if (terminal.rows > 0) {
+          terminal.refresh(0, terminal.rows - 1)
+        }
         break
     }
 

@@ -541,7 +541,7 @@ ipcMain.handle('ssh-resize', (_event, { id, cols, rows }: { id: string; cols: nu
   const conn = sshConnections.get(id)
   if (conn && conn.stream) {
     try {
-      conn.stream.setWindow(rows, cols)
+      conn.stream.setWindow(rows, cols, 0, 0)
       return { success: true }
     } catch (error) {
       return { success: false, error: (error as Error).message }
@@ -757,7 +757,7 @@ ipcMain.handle('ai-chat-stream', async (_event, request: AIChatRequest) => {
 
     switch (provider) {
       case 'openai':
-        url = `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`
+        url = `${(baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '')}/chat/completions`
         headers['Authorization'] = `Bearer ${apiKey}`
         body = {
           model,
@@ -767,7 +767,7 @@ ipcMain.handle('ai-chat-stream', async (_event, request: AIChatRequest) => {
         break
 
       case 'claude':
-        url = `${baseUrl || 'https://api.anthropic.com/v1'}/messages`
+        url = `${(baseUrl || 'https://api.anthropic.com/v1').replace(/\/$/, '')}/messages`
         headers['x-api-key'] = apiKey || ''
         headers['anthropic-version'] = '2023-06-01'
 
@@ -800,7 +800,7 @@ ipcMain.handle('ai-chat-stream', async (_event, request: AIChatRequest) => {
         break
 
       case 'ollama':
-        url = `${baseUrl || 'http://localhost:11434'}/api/chat`
+        url = `${(baseUrl || 'http://localhost:11434').replace(/\/$/, '')}/api/chat`
         body = {
           model,
           messages,
@@ -809,7 +809,7 @@ ipcMain.handle('ai-chat-stream', async (_event, request: AIChatRequest) => {
         break
 
       case 'custom':
-        url = `${baseUrl}/chat/completions`
+        url = `${(baseUrl || '').replace(/\/$/, '')}/chat/completions`
         if (apiKey) {
           headers['Authorization'] = `Bearer ${apiKey}`
         }
@@ -827,11 +827,19 @@ ipcMain.handle('ai-chat-stream', async (_event, request: AIChatRequest) => {
     console.log('[AI Chat] Sending request to:', url)
     console.log('[AI Chat] Model:', body.model)
 
+    // 创建超时控制器 - 60秒超时
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 60000)
+
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: controller.signal
     })
+
+    // 请求成功后清除超时
+    clearTimeout(timeoutId)
 
     console.log('[AI Chat] Response status:', response.status)
 
@@ -894,6 +902,10 @@ ipcMain.handle('ai-chat-stream', async (_event, request: AIChatRequest) => {
     return { success: true, streamId }
   } catch (error) {
     console.error('[AI Chat] Error:', error)
+    // 处理超时错误
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { success: false, error: '请求超时（60秒），请检查网络连接或模型服务状态' }
+    }
     return { success: false, error: error instanceof Error ? error.message : '请求失败' }
   }
 })

@@ -18,7 +18,6 @@ import { toast } from './utils/notification'
 import { useResponsive } from './utils/useResponsive'
 import { initLayout, layoutState, toggleAssistantPanel, setCustomThemeColor } from './utils/layoutStore'
 import { initModalManager, destroyModalManager } from './utils/modalManager'
-import { updateStatus } from './utils/terminalStatus'
 
 // 会话类型定义
 interface Session {

@@ -139,7 +139,7 @@
                     :key="provider.value"
                     class="provider-btn"
                     :class="{ active: modelForm.provider === provider.value }"
-                    @click="modelForm.provider = provider.value"
+                    @click="modelForm.provider = provider.value as 'openai' | 'claude' | 'ollama' | 'custom'"
                   >
                     {{ provider.label }}
                   </button>
@@ -317,7 +317,7 @@
             <input
               type="color"
               :value="layoutState.customThemeColor || '#b79fff'"
-              @input="setCustomThemeColor($event.target.value)"
+              @input="handleThemeColorChange"
               class="color-picker"
             />
             <button
@@ -445,7 +445,7 @@ const editingModel = ref<AIModelConfig | null>(null)
 
 const modelForm = reactive({
   name: '',
-  provider: 'openai' as const,
+  provider: 'openai' as 'openai' | 'claude' | 'ollama' | 'custom',
   model: '',
   apiKey: '',
   baseUrl: ''
@@ -549,7 +549,7 @@ const themeList = getThemeList()
 const getThemeColor = (themeKey: string, colorName: string) => {
   const theme = terminalThemes[themeKey]
   if (!theme) return '#ffffff'
-  return theme[colorName] || theme.foreground
+  return ((theme as unknown) as Record<string, string>)[colorName] || theme.foreground
 }
 
 // 获取主题预览样式
@@ -614,6 +614,12 @@ const updateCriticalThreshold = (event: Event) => {
 // 重置设置
 const handleReset = () => {
   resetSettings()
+}
+
+// 处理主题色变化
+const handleThemeColorChange = (event: Event) => {
+  const value = (event.target as HTMLInputElement).value
+  setCustomThemeColor(value)
 }
 </script>
 

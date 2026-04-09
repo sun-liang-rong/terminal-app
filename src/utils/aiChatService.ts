@@ -1,6 +1,7 @@
 // AI 对话服务 - 支持多提供商 API 调用 (通过主进程代理)
 import { ref } from 'vue'
 import type { AIModelConfig } from './aiModelsStore'
+import { addMessageToSession, currentSession, clearCurrentSession } from './chatSessionStore'
 
 // 消息类型
 export interface ChatMessage {
@@ -25,7 +26,7 @@ let currentProvider: string = ''
 // 生成唯一 ID
 const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-// 添加消息
+// 添加消息（同时添加到当前会话）
 export const addMessage = (role: 'user' | 'assistant' | 'system', content: string) => {
   const message: ChatMessage = {
     id: generateId(),
@@ -33,13 +34,20 @@ export const addMessage = (role: 'user' | 'assistant' | 'system', content: strin
     content,
     timestamp: Date.now()
   }
+
+  // 添加到全局消息列表（向后兼容）
   chatMessages.value.push(message)
+
+  // 同时添加到当前会话
+  addMessageToSession(message)
+
   return message
 }
 
-// 清空对话
+// 清空对话（同时清空当前会话）
 export const clearChat = () => {
   chatMessages.value = []
+  clearCurrentSession()
 }
 
 // 解析 OpenAI 格式的流数据

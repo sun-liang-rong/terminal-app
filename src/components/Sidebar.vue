@@ -10,8 +10,7 @@
           </svg>
         </div>
         <div class="logo-text" v-if="!isCollapsed">
-          <h2 class="logo-title">架构师</h2>
-          <p class="logo-subtitle">管理员模式</p>
+          <h2 class="logo-title">终端MVP</h2>
         </div>
       </div>
     </div>

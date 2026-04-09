@@ -29,7 +29,7 @@ export interface TerminalTheme {
 }
 
 // 终端主题配置 - 根据产品设计文档定义
-export const terminalThemes: Record<ThemeKey, TerminalTheme> = {
+export const terminalThemes: Record<ThemeKey, TerminalTheme> & Record<string, TerminalTheme> = {
   // 主题一：专业深色（Dark Pro）- 默认主题/开发首选
   darkPro: {
     name: '专业深色',

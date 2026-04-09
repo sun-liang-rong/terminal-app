@@ -73,8 +73,6 @@ onMounted(async () => {
     rows: 24,
     letterSpacing: 0.5,
     lineHeight: 1.2,
-    // 启用鼠标事件支持（对 htop/tmux 等交互式程序很重要）
-    mouseEvents: true,
     // 不转换 EOL，让远程服务器处理
     convertEol: false
   })
@@ -88,9 +86,13 @@ onMounted(async () => {
   themeChangeListener = () => {
     if (terminal) {
       const newTheme = getCurrentTheme()
-      terminal.options.theme = newTheme
-      // 刷新终端显示
-      terminal.refresh(0, terminal.rows - 1)
+      console.log('[SshTerminal] Theme changing to:', newTheme?.name || 'unknown')
+      // 强制更新主题 - 使用 Object.assign 确保主题对象被正确应用
+      Object.assign(terminal.options, { theme: newTheme })
+      // 刷新终端显示 - 确保 rows 有效
+      if (terminal.rows > 0) {
+        terminal.refresh(0, terminal.rows - 1)
+      }
     }
   }
   window.addEventListener('theme-change', themeChangeListener as EventListener)
@@ -116,8 +118,10 @@ onMounted(async () => {
         terminal.options.cursorStyle = value
         break
       case 'theme':
-        terminal.options.theme = getCurrentTheme()
-        terminal.refresh(0, terminal.rows - 1)
+        Object.assign(terminal.options, { theme: getCurrentTheme() })
+        if (terminal.rows > 0) {
+          terminal.refresh(0, terminal.rows - 1)
+        }
         break
     }
 

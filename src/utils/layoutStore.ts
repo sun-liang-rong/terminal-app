@@ -63,6 +63,11 @@ export const initLayout = () => {
   initialized = true
   loadFromStorage()
 
+  // 应用存储的自定义主题色
+  if (layoutState.value.customThemeColor) {
+    setCustomThemeColor(layoutState.value.customThemeColor)
+  }
+
   // 监听变化自动保存
   watch(layoutState, () => {
     saveToStorage()

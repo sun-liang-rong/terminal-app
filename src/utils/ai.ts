@@ -239,7 +239,7 @@ class OllamaProvider implements AIProvider {
 
   constructor(model: string = 'llama3', baseUrl: string = 'http://localhost:11434') {
     this.model = model
-    this.baseUrl = baseUrl
+    this.baseUrl = (baseUrl || 'http://localhost:11434').replace(/\/$/, '')
   }
 
   async generateCommands(prompt: string, platform: string): Promise<Command[]> {

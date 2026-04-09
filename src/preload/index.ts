@@ -9,7 +9,7 @@ console.log('[Preload] contextBridge available:', !!contextBridge)
 
 // 存储每个终端的监听器
 interface ListenerInfo {
-  type: 'data' | 'exit' | 'ssh-data' | 'ssh-close' | 'window-state'
+  type: 'data' | 'exit' | 'ssh-data' | 'ssh-close' | 'window-state' | 'ai-stream'
   handler: (event: Electron.IpcRendererEvent, data: unknown) => void
 }
 
@@ -70,7 +70,11 @@ interface ElectronAPI {
     messages: Array<{ role: string; content: string }>
   }) => Promise<{ success: boolean; streamId?: string; error?: string }>
   onAIStreamData: (callback: (data: { streamId: string; data?: string; done?: boolean; error?: string }) => void) => number
+  removeAIStreamListener: (id: number) => void
   aiAbortStream: (streamId: string) => Promise<{ success: boolean; error?: string }>
+  // 终端设置存储相关
+  getTerminalSettings: () => Promise<{ success: boolean; data?: unknown; error?: string }>
+  saveTerminalSettings: (settings: unknown) => Promise<{ success: boolean; error?: string }>
   // 窗口控制相关
   windowMinimize: () => Promise<{ success: boolean; error?: string }>
   windowMaximize: () => Promise<{ success: boolean; error?: string }>
