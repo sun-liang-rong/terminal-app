@@ -17,7 +17,11 @@
       "Bash(taskkill /F /IM electron.exe taskkill /F /IM node.exe sleep 3 echo \"=== 进程已清理 ===\" netstat -ano)",
       "Bash(taskkill /F /PID 24876 taskkill /F /PID 25304 taskkill /F /PID 5580 sleep 2 netstat -ano)",
       "Bash(npx electron-vite:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npx svg-to-ico:*)",
+      "Bash(npx electron-builder:*)",
+      "Bash(rm -rf ~/AppData/Local/electron/Cache)",
+      "Bash(rm -rf ~/AppData/Local/electron-builder/Cache)"
     ]
   }
 }

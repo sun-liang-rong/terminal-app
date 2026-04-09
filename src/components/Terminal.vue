@@ -7,9 +7,7 @@
       <div v-if="showGuide" class="terminal-guide" @click="hideGuide">
         <div class="guide-content">
           <div class="guide-logo">
-            <div class="logo-icon">
-              <div class="logo-shine"></div>
-            </div>
+            <img src="/icon.png" alt="Logo" class="logo-icon" />
           </div>
           <h2 class="guide-title">欢迎使用神经终端</h2>
           <p class="guide-subtitle">高效、智能的现代化终端体验</p>
@@ -728,9 +726,8 @@ function processSimulatedCommand(cmd: string) {
 .guide-logo .logo-icon {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   border-radius: 14px;
-  position: relative;
+  object-fit: contain;
   box-shadow: var(--shadow-primary);
 }
 

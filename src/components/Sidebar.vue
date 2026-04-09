@@ -4,10 +4,7 @@
     <div class="sidebar-header">
       <div class="logo" @click="isCollapsed && toggleCollapse()" role="banner">
         <div class="logo-icon" aria-hidden="true">
-          <svg class="logo-svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M4 17h6v2H4v-2zm13-9h-10v2h10V8zm0 4H8v2h9v-2zM7 8H4v2h3V8zm0 4H4v2h3v-2z"/>
-            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z" opacity="0.3"/>
-          </svg>
+          <img src="/icon.png" alt="Logo" class="logo-img" />
         </div>
         <div class="logo-text" v-if="!isCollapsed">
           <h2 class="logo-title">终端MVP</h2>
@@ -31,15 +28,22 @@
           @click="$emit('tab-change', item.id)"
         >
           <div class="nav-icon-wrapper">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-if="item.icon === 'dns'">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            <!-- SSH 连接图标 -->
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-if="item.icon === 'ssh'">
+              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/>
+              <path d="M6 9l4 3-4 3V9zm6 7h6v-1h-6v1zm-2-4H8v2h2v-2z"/>
+              <circle cx="18" cy="8" r="1.5" fill="currentColor"/>
             </svg>
+            <!-- 本地终端图标 -->
             <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-else-if="item.icon === 'terminal'">
               <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/>
               <path d="M6 9l4 3-4 3V9zm6 7h6v-1h-6v1z"/>
             </svg>
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-else-if="item.icon === 'smart_toy'">
-              <path d="M19.98 11.62c.01-.09.02-.18.02-.28V7c0-1.1-.9-2-2-2h-4.52L12 2l-2 3H6c-1.1 0-2 .9-2 2v4c0 .1.01.19.02.28C2.55 12.1 1 13.88 1 16c0 2.76 2.24 5 5 5 1.36 0 2.6-.55 3.5-1.44.9.89 2.14 1.44 3.5 1.44s2.6-.55 3.5-1.44c.9.89 2.14 1.44 3.5 1.44 2.76 0 5-2.24 5-5 0-2.12-1.55-3.9-3.52-4.38zM6 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6 5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+            <!-- AI 助手图标 -->
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-else-if="item.icon === 'ai'">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+              <circle cx="12" cy="10" r="2"/>
+              <path d="M12 13c-2.33 0-4.31 1.46-5.11 3.5h10.22c-.8-2.04-2.78-3.5-5.11-3.5z" opacity="0.6"/>
             </svg>
           </div>
           <Transition name="nav-label">
@@ -59,7 +63,7 @@
       </button>
       <button class="footer-item" @click="$emit('tab-change', 'status')">
         <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
         </svg>
         <span>状态</span>
       </button>
@@ -109,7 +113,7 @@ const navItems = ref([
   {
     id: 'ssh',
     label: 'SSH 连接',
-    icon: 'dns'
+    icon: 'ssh'
   },
   {
     id: 'terminal',
@@ -169,10 +173,11 @@ const navItems = ref([
   box-shadow: 0 0 20px rgba(183, 159, 255, 0.2);
 }
 
-.logo-svg {
-  width: 24px;
-  height: 24px;
-  color: var(--color-on-primary, #361083);
+.logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .logo-text {
