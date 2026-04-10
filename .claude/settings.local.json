@@ -21,7 +21,9 @@
       "Bash(npx svg-to-ico:*)",
       "Bash(npx electron-builder:*)",
       "Bash(rm -rf ~/AppData/Local/electron/Cache)",
-      "Bash(rm -rf ~/AppData/Local/electron-builder/Cache)"
+      "Bash(rm -rf ~/AppData/Local/electron-builder/Cache)",
+      "Bash(gh repo:*)",
+      "Bash(npx oh-my-claudecode:*)"
     ]
   }
 }

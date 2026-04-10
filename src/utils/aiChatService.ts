@@ -45,7 +45,9 @@ export const loadChatHistory = async () => {
 export const saveChatHistory = async () => {
   try {
     if (window.electronAPI?.saveAIChatHistory) {
-      await window.electronAPI.saveAIChatHistory(chatMessages.value)
+      // 转换为纯对象以避免 structured clone 错误
+      const plainMessages = JSON.parse(JSON.stringify(chatMessages.value))
+      await window.electronAPI.saveAIChatHistory(plainMessages)
     }
   } catch (error) {
     console.error('[AI Chat] Failed to save chat history:', error)

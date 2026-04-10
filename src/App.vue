@@ -18,6 +18,7 @@ import { toast } from './utils/notification'
 import { useResponsive } from './utils/useResponsive'
 import { initLayout, layoutState, toggleAssistantPanel, setCustomThemeColor } from './utils/layoutStore'
 import { initModalManager, destroyModalManager } from './utils/modalManager'
+import { PhX, PhPlus } from '@phosphor-icons/vue'
 
 // 会话类型定义
 interface Session {
@@ -499,9 +500,7 @@ const stopSystemMonitor = () => {
                   v-show="sessions.length > 1"
                   title="关闭会话"
                 >
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                  </svg>
+                  <PhX weight="regular" />
                 </button>
               </div>
             </div>
@@ -511,9 +510,7 @@ const stopSystemMonitor = () => {
               @click="createNewSession"
               title="新建会话 (Ctrl+T)"
             >
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-              </svg>
+              <PhPlus weight="regular" />
             </button>
           </div>
 
@@ -773,7 +770,7 @@ body {
   transform: scale(0.95);
 }
 
-.add-tab-btn svg {
+.add-tab-btn :deep(svg) {
   width: 16px;
   height: 16px;
 }
@@ -888,7 +885,7 @@ body {
   flex-shrink: 0;
 }
 
-.tab-close svg {
+.tab-close :deep(svg) {
   width: 12px;
   height: 12px;
 }

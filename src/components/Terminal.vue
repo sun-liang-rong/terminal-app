@@ -7,7 +7,7 @@
       <div v-if="showGuide" class="terminal-guide" @click="hideGuide">
         <div class="guide-content">
           <div class="guide-logo">
-            <img src="/icon.png" alt="Logo" class="logo-icon" />
+            <img src="/favicon.svg" alt="Logo" class="logo-icon" />
           </div>
           <h2 class="guide-title">欢迎使用神经终端</h2>
           <p class="guide-subtitle">高效、智能的现代化终端体验</p>

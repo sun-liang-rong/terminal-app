@@ -4,7 +4,7 @@
     <div class="settings-header">
       <h2 class="settings-title">设置</h2>
       <div class="search-wrapper">
-        <i class="iconfont icon-search"></i>
+        <PhMagnifyingGlass class="search-icon" weight="regular" />
         <input
           type="text"
           v-model="searchQuery"
@@ -19,7 +19,7 @@
       <!-- 主题设置 -->
       <section class="settings-section" v-show="matchesSearch('主题 外观 颜色')">
         <div class="section-header">
-          <i class="iconfont icon-theme section-icon"></i>
+          <PhPalette class="section-icon" weight="regular" />
           <h3 class="section-title">终端主题</h3>
           <span class="section-badge">{{ themeList.length }} 个主题</span>
         </div>
@@ -58,7 +58,7 @@
               </div>
             </div>
             <div class="theme-check" v-if="currentTheme === theme.key">
-              <i class="iconfont icon-check"></i>
+              <PhCheck weight="bold" />
             </div>
           </div>
         </div>
@@ -67,7 +67,7 @@
       <!-- AI 模型配置 -->
       <section class="settings-section" v-show="matchesSearch('AI 模型 模型配置 GPT Claude')">
         <div class="section-header">
-          <i class="iconfont icon-robot section-icon"></i>
+          <PhRobot class="section-icon" weight="regular" />
           <h3 class="section-title">AI 模型配置</h3>
           <span class="section-badge">{{ aiModels.length }} 个模型</span>
         </div>
@@ -88,10 +88,10 @@
             </div>
             <div class="model-actions">
               <button class="model-btn edit" @click.stop="editModel(model)" title="编辑">
-                <i class="iconfont icon-edit"></i>
+                <PhPencilSimple weight="regular" />
               </button>
               <button class="model-btn delete" @click.stop="deleteModel(model.id)" title="删除" v-if="aiModels.length > 1">
-                <i class="iconfont icon-delete"></i>
+                <PhTrash weight="regular" />
               </button>
             </div>
           </div>
@@ -99,7 +99,7 @@
 
         <!-- 添加模型按钮 -->
         <button class="add-model-btn" @click="openAddModal">
-          <i class="iconfont icon-add"></i>
+          <PhPlus weight="regular" />
           <span>添加模型</span>
         </button>
 
@@ -109,7 +109,7 @@
             <div class="modal-header">
               <h4>{{ editingModel ? '编辑模型' : '添加模型' }}</h4>
               <button class="close-btn" @click="closeModelModal">
-                <i class="iconfont icon-close"></i>
+                <PhX weight="regular" />
               </button>
             </div>
             <div class="modal-body">
@@ -177,7 +177,7 @@
       <!-- 字体设置 -->
       <section class="settings-section" v-show="matchesSearch('字体 大小 类型')">
         <div class="section-header">
-          <i class="iconfont icon-font section-icon"></i>
+          <PhTextT class="section-icon" weight="regular" />
           <h3 class="section-title">终端字体</h3>
         </div>
         <div class="section-desc">调整终端的字体大小和类型</div>
@@ -193,7 +193,7 @@
           <div class="custom-select-wrapper">
             <button class="custom-select-trigger" @click="showFontDropdown = !showFontDropdown">
               <span>{{ getFontDisplayName(fontFamily) }}</span>
-              <i class="iconfont icon-chevron-down"></i>
+              <PhCaretDown weight="regular" />
             </button>
             <Transition name="dropdown">
               <div class="custom-select-dropdown" v-if="showFontDropdown">
@@ -206,7 +206,7 @@
                 >
                   <span class="option-preview" :style="{ fontFamily: font.value }">Aa</span>
                   <span class="option-name">{{ font.label }}</span>
-                  <i class="iconfont icon-check" v-if="fontFamily === font.value"></i>
+                  <PhCheck weight="bold" v-if="fontFamily === font.value" />
                 </div>
               </div>
             </Transition>
@@ -217,7 +217,7 @@
       <!-- 行为设置 -->
       <section class="settings-section" v-show="matchesSearch('行为 光标 复制 自动')">
         <div class="section-header">
-          <i class="iconfont icon-behavior section-icon"></i>
+          <PhCursorClick class="section-icon" weight="regular" />
           <h3 class="section-title">终端行为</h3>
         </div>
         <div class="section-desc">配置终端的交互行为</div>
@@ -238,7 +238,7 @@
           <div class="custom-select-wrapper">
             <button class="custom-select-trigger small" @click="showCursorDropdown = !showCursorDropdown">
               <span>{{ cursorStyleLabels[cursorStyle] }}</span>
-              <i class="iconfont icon-chevron-down"></i>
+              <PhCaretDown weight="regular" />
             </button>
             <Transition name="dropdown">
               <div class="custom-select-dropdown small" v-if="showCursorDropdown">
@@ -251,7 +251,7 @@
                 >
                   <span class="cursor-preview" :class="'cursor-' + key"></span>
                   <span class="option-name">{{ label }}</span>
-                  <i class="iconfont icon-check" v-if="cursorStyle === key"></i>
+                  <PhCheck weight="bold" v-if="cursorStyle === key" />
                 </div>
               </div>
             </Transition>
@@ -262,7 +262,7 @@
       <!-- 布局设置 -->
       <section class="settings-section" v-show="matchesSearch('布局 侧边栏 紧凑 主题色')">
         <div class="section-header">
-          <i class="iconfont icon-layout section-icon"></i>
+          <PhLayout class="section-icon" weight="regular" />
           <h3 class="section-title">布局设置</h3>
         </div>
         <div class="section-desc">自定义应用布局</div>
@@ -271,7 +271,7 @@
           <div class="custom-select-wrapper">
             <button class="custom-select-trigger small" @click="showLayoutDropdown = !showLayoutDropdown">
               <span>{{ layoutState.sidebarPosition === 'left' ? '左侧' : '右侧' }}</span>
-              <i class="iconfont icon-chevron-down"></i>
+              <PhCaretDown weight="regular" />
             </button>
             <Transition name="dropdown">
               <div class="custom-select-dropdown small" v-if="showLayoutDropdown">
@@ -281,7 +281,7 @@
                   @click="updateLayoutSetting('sidebarPosition', 'left'); showLayoutDropdown = false"
                 >
                   <span class="option-name">左侧</span>
-                  <i class="iconfont icon-check" v-if="layoutState.sidebarPosition === 'left'"></i>
+                  <PhCheck weight="bold" v-if="layoutState.sidebarPosition === 'left'" />
                 </div>
                 <div
                   class="select-option"
@@ -289,7 +289,7 @@
                   @click="updateLayoutSetting('sidebarPosition', 'right'); showLayoutDropdown = false"
                 >
                   <span class="option-name">右侧</span>
-                  <i class="iconfont icon-check" v-if="layoutState.sidebarPosition === 'right'"></i>
+                  <PhCheck weight="bold" v-if="layoutState.sidebarPosition === 'right'" />
                 </div>
               </div>
             </Transition>
@@ -324,7 +324,7 @@
       <!-- 性能设置 -->
       <section class="settings-section" v-show="matchesSearch('性能 内存 阈值 告警')">
         <div class="section-header">
-          <i class="iconfont icon-cpu section-icon"></i>
+          <PhCpu class="section-icon" weight="regular" />
           <h3 class="section-title">性能设置</h3>
         </div>
         <div class="section-desc">配置内存告警阈值</div>
@@ -343,7 +343,7 @@
           </div>
         </div>
         <div class="threshold-hint">
-          <i class="iconfont icon-info"></i>
+          <PhInfo weight="regular" />
           <span>内存占用超过阈值时会显示警告提示</span>
         </div>
       </section>
@@ -351,7 +351,7 @@
 
     <div class="settings-footer">
       <button class="reset-btn" @click="handleReset">
-        <i class="iconfont icon-close"></i>
+        <PhX weight="regular" />
         <span>重置默认</span>
       </button>
       <div class="save-hint">更改自动保存</div>
@@ -361,6 +361,22 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, reactive } from 'vue'
+import {
+  PhMagnifyingGlass,
+  PhPalette,
+  PhCheck,
+  PhRobot,
+  PhPencilSimple,
+  PhTrash,
+  PhPlus,
+  PhX,
+  PhTextT,
+  PhCaretDown,
+  PhCursorClick,
+  PhLayout,
+  PhCpu,
+  PhInfo
+} from '@phosphor-icons/vue'
 import {
   initSettings,
   getSettings,
@@ -657,9 +673,11 @@ const handleThemeColorChange = (event: Event) => {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.search-wrapper .iconfont {
-  font-size: 12px;
+.search-wrapper .search-icon {
+  width: 16px;
+  height: 16px;
   color: var(--color-text-tertiary, #6b6b78);
+  flex-shrink: 0;
 }
 
 .settings-search {
@@ -833,8 +851,9 @@ const handleThemeColorChange = (event: Event) => {
   justify-content: center;
 }
 
-.theme-check .iconfont {
-  font-size: 11px;
+.theme-check :deep(svg) {
+  width: 14px;
+  height: 14px;
   color: var(--color-on-primary, #361083);
 }
 
@@ -917,8 +936,9 @@ const handleThemeColorChange = (event: Event) => {
   color: #ff5f57;
 }
 
-.model-btn .iconfont {
-  font-size: 12px;
+.model-btn :deep(svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .add-model-btn {
@@ -942,8 +962,9 @@ const handleThemeColorChange = (event: Event) => {
   border-color: rgba(183, 159, 255, 0.5);
 }
 
-.add-model-btn .iconfont {
-  font-size: 14px;
+.add-model-btn :deep(svg) {
+  width: 16px;
+  height: 16px;
 }
 
 /* ========== 模型弹窗 ========== */
@@ -1003,8 +1024,9 @@ const handleThemeColorChange = (event: Event) => {
   color: var(--color-text-primary, #e5e5e7);
 }
 
-.close-btn .iconfont {
-  font-size: 12px;
+.close-btn :deep(svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .modal-body {
@@ -1205,10 +1227,12 @@ const handleThemeColorChange = (event: Event) => {
   border-color: rgba(183, 159, 255, 0.2);
 }
 
-.custom-select-trigger .iconfont {
-  font-size: 10px;
+.custom-select-trigger :deep(svg) {
+  width: 12px;
+  height: 12px;
   color: #6b6b78;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .custom-select-dropdown {
@@ -1263,9 +1287,11 @@ const handleThemeColorChange = (event: Event) => {
   flex: 1;
 }
 
-.select-option .iconfont {
-  font-size: 11px;
+.select-option :deep(svg) {
+  width: 14px;
+  height: 14px;
   color: var(--color-primary, #b79fff);
+  flex-shrink: 0;
 }
 
 .cursor-preview {
@@ -1392,9 +1418,11 @@ const handleThemeColorChange = (event: Event) => {
   margin-top: 4px;
 }
 
-.threshold-hint .iconfont {
-  font-size: 12px;
+.threshold-hint :deep(svg) {
+  width: 16px;
+  height: 16px;
   color: var(--color-primary, #b79fff);
+  flex-shrink: 0;
 }
 
 .threshold-hint span {
@@ -1430,8 +1458,9 @@ const handleThemeColorChange = (event: Event) => {
   border-color: rgba(255, 95, 87, 0.25);
 }
 
-.reset-btn .iconfont {
-  font-size: 12px;
+.reset-btn :deep(svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .save-hint {

@@ -1,10 +1,10 @@
 <template>
   <aside class="sidebar" :class="{ collapsed: isCollapsed }" role="navigation" aria-label="主导航">
-    <!-- Mac 下的 Logo 区域 -->
-    <div v-if="isMac" class="sidebar-header">
+    <!-- Logo 区域 -->
+    <div class="sidebar-header">
       <div class="logo" @click="isCollapsed && toggleCollapse()" role="banner">
         <div class="logo-icon" aria-hidden="true">
-          <img src="/icon.png" alt="Logo" class="logo-img" />
+          <img src="/favicon.svg" alt="Logo" class="logo-img" />
         </div>
         <div class="logo-text" v-if="!isCollapsed">
           <h2 class="logo-title">终端MVP</h2>
@@ -29,23 +29,9 @@
         >
           <div class="nav-icon-wrapper">
             <!-- SSH 连接图标 -->
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-if="item.icon === 'ssh'">
-              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/>
-              <path d="M6 9l4 3-4 3V9zm6 7h6v-1h-6v1zm-2-4H8v2h2v-2z"/>
-              <circle cx="18" cy="8" r="1.5" fill="currentColor"/>
-            </svg>
+            <PhComputerTower v-if="item.icon === 'ssh'" class="nav-icon" weight="regular" />
             <!-- 本地终端图标 -->
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-else-if="item.icon === 'terminal'">
-              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/>
-              <path d="M6 9l4 3-4 3V9zm6 7h6v-1h-6v1z"/>
-            </svg>
-            <!-- AI 助手图标 -->
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" v-else-if="item.icon === 'ai'">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.9"/>
-              <path d="M12 7v2.5M12 14.5V17M7 12h2.5M14.5 12H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <PhTerminal v-else-if="item.icon === 'terminal'" class="nav-icon" weight="regular" />
           </div>
           <Transition name="nav-label">
             <span class="nav-label" v-if="!isCollapsed">{{ item.label }}</span>
@@ -57,15 +43,11 @@
     <!-- 底部操作 -->
     <div class="sidebar-footer" v-if="!isCollapsed">
       <button class="footer-item" @click="$emit('tab-change', 'help')">
-        <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
-        </svg>
+        <PhQuestion class="footer-icon" weight="regular" />
         <span>帮助</span>
       </button>
       <button class="footer-item" @click="$emit('tab-change', 'status')">
-        <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
+        <PhCheckCircle class="footer-icon" weight="regular" />
         <span>状态</span>
       </button>
     </div>
@@ -76,9 +58,7 @@
       @click="toggleCollapse"
       :aria-label="isCollapsed ? '展开侧边栏' : '折叠侧边栏'"
     >
-      <svg class="collapse-icon" viewBox="0 0 24 24" fill="currentColor" :style="{ transform: isCollapsed ? 'rotate(180deg)' : 'none' }">
-        <path d="M11 17l-5-5 5-5v10zm7 0l-5-5 5-5v10z"/>
-      </svg>
+      <PhCaretDoubleLeft class="collapse-icon" :style="{ transform: isCollapsed ? 'rotate(180deg)' : 'none' }" weight="bold" />
     </button>
   </aside>
 </template>
@@ -86,6 +66,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { layoutState, setSidebarCollapsed } from '../utils/layoutStore'
+import { PhTerminal, PhComputerTower, PhQuestion, PhCheckCircle, PhCaretDoubleLeft } from '@phosphor-icons/vue'
 
 const props = defineProps({
   activeTab: {
@@ -159,10 +140,10 @@ const navItems = ref([
   padding: 12px 12px 24px 12px;
 }
 
-/* ========== Header (Mac Logo) ========== */
+/* ========== Header (Logo) ========== */
 .sidebar-header {
   margin-bottom: 20px;
-  padding-left: 76px;
+  padding-left: 8px;
   padding-top: 8px;
   height: 38px;
   display: flex;
@@ -280,6 +261,7 @@ const navItems = ref([
   width: 20px;
   height: 20px;
   opacity: 0.9;
+  flex-shrink: 0;
 }
 
 .nav-label {

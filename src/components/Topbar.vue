@@ -1,68 +1,45 @@
 <template>
   <header class="topbar">
-    <!-- 左侧：Logo（仅 Windows） -->
+    <!-- 左侧：拖拽区域 -->
     <div class="topbar-left" :class="{ 'mac-logo': isMac }">
-      <div v-if="!isMac" class="logo">
-        <div class="logo-icon">
-          <img src="/icon.png" alt="Logo" class="logo-img" />
-        </div>
-        <span class="logo-text">终端MVP</span>
-      </div>
+      <!-- Logo 已移至侧边栏 -->
     </div>
 
     <!-- 右侧：工具栏 -->
     <div class="topbar-right">
       <!-- 切换侧边栏按钮 -->
       <button class="tool-btn" @click="toggleSidebar" title="切换左侧边栏">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
-        </svg>
+        <PhList class="tool-icon" weight="regular" />
       </button>
 
       <!-- 切换AI助手按钮 -->
       <button class="tool-btn" @click="toggleAiPanel" title="切换AI助手">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-          <circle cx="12" cy="10" r="2"/>
-          <path d="M12 13c-2.33 0-4.31 1.46-5.11 3.5h10.22c-.8-2.04-2.78-3.5-5.11-3.5z" opacity="0.6"/>
-        </svg>
+        <PhRobot class="tool-icon" weight="regular" />
       </button>
 
       <!-- 设置按钮 -->
       <button class="tool-btn" @click="emit('open-settings')" title="设置">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L4.09 8.77c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-        </svg>
+        <PhGear class="tool-icon" weight="regular" />
       </button>
 
       <!-- 用户头像 -->
       <div class="user-avatar">
         <div class="avatar-placeholder">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-          </svg>
+          <PhUser weight="regular" />
         </div>
       </div>
 
       <!-- 窗口控制按钮（仅 Windows） -->
       <div v-if="isWindows" class="window-controls">
         <button class="window-btn minimize" @click="minimizeWindow" title="最小化">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 14H4v-2h16v2z"/>
-          </svg>
+          <PhMinus weight="regular" />
         </button>
         <button class="window-btn maximize" @click="maximizeWindow" title="最大化/还原">
-          <svg v-if="isMaximized" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
-          </svg>
+          <PhCopy v-if="isMaximized" weight="regular" />
+          <PhSquare v-else weight="regular" />
         </button>
         <button class="window-btn close" @click="closeWindow" title="关闭">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-          </svg>
+          <PhX weight="regular" />
         </button>
       </div>
     </div>
@@ -72,6 +49,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { toggleSidebarCollapsed, toggleAssistantPanel } from '../utils/layoutStore'
+import { PhList, PhRobot, PhGear, PhUser, PhMinus, PhSquare, PhCopy, PhX } from '@phosphor-icons/vue'
 
 const emit = defineEmits(['open-settings', 'open-palette', 'new-session', 'switch-tab'])
 
@@ -165,44 +143,9 @@ const closeWindow = async () => {
   align-items: center;
 }
 
-/* Logo */
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: 8px;
-}
-
-/* Mac 系统下 Logo 向右偏移，给系统按钮留空间 */
-.topbar-left.mac-logo .logo {
-  margin-left: 72px;
-}
-
-.logo-icon {
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, var(--color-primary, #b79fff) 0%, var(--color-primary-container, #ab8ffe) 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 0 15px rgba(183, 159, 255, 0.2);
-}
-
-.logo-img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-.logo-text {
-  font-family: var(--font-headline, 'Space Grotesk', sans-serif);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-on-surface, #f6f6fc);
-  letter-spacing: -0.2px;
+/* Mac 系统下拖拽区域向右偏移，给系统按钮留空间 */
+.topbar-left.mac-logo {
+  padding-left: 72px;
 }
 
 /* ========== 右侧区域 ========== */
@@ -266,7 +209,7 @@ const closeWindow = async () => {
   color: var(--color-primary, #b79fff);
 }
 
-.avatar-placeholder svg {
+.avatar-placeholder :deep(svg) {
   width: 18px;
   height: 18px;
 }
@@ -305,7 +248,7 @@ const closeWindow = async () => {
   color: white;
 }
 
-.window-btn svg {
+.window-btn :deep(svg) {
   width: 14px;
   height: 14px;
 }

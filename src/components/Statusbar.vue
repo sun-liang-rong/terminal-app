@@ -17,10 +17,7 @@
     <div class="status-right">
       <span class="status-item">Node v{{ nodeVersion }}</span>
       <span class="status-item git-info" v-if="gitBranch">
-        <svg class="git-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14c-2.21 0-4-1.79-4-4 0-1.06.4-2.02 1.05-2.76l-.72-.73C7.34 8.64 7 9.29 7 10c0 2.76 2.24 5 5 5s5-2.24 5-5c0-2.76-2.24-5-5-5-.71 0-1.36.14-1.99.38l.73.73c.74-.65 1.7-1.05 2.76-1.05 2.21 0 4 1.79 4 4s-1.79 4-4 4z"/>
-          <circle cx="12" cy="10" r="1.5"/>
-        </svg>
+        <PhGitBranch class="git-icon" weight="regular" />
         {{ gitBranch }}
       </span>
       <span class="status-item">UTF-8</span>
@@ -31,6 +28,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { subscribeStatus } from '../utils/terminalStatus'
+import { PhGitBranch } from '@phosphor-icons/vue'
 
 // 状态订阅
 const status = ref({
@@ -209,5 +207,6 @@ onUnmounted(() => {
   width: 12px;
   height: 12px;
   opacity: 0.7;
+  flex-shrink: 0;
 }
 </style>
