@@ -264,6 +264,7 @@ export const sendMessage = async (
               delta = parseOllamaStream(data.data)
               break
             case 'openai':
+            case 'openrouter':
             case 'custom':
             default:
               delta = parseOpenAIStream(data.data)

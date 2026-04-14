@@ -12,12 +12,14 @@ import SettingsPanel from './components/SettingsPanel.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import Modal from './components/Modal.vue'
 import CommandPalette from './components/CommandPalette.vue'
+import SftpPanel from './components/SftpPanel.vue'
 import type { SshConfig } from './types/electron'
 import { updateStatus } from './utils/terminalStatus'
 import { toast } from './utils/notification'
 import { useResponsive } from './utils/useResponsive'
 import { initLayout, layoutState, toggleAssistantPanel, setCustomThemeColor } from './utils/layoutStore'
 import { initModalManager, destroyModalManager } from './utils/modalManager'
+import { setSSHConnection } from './utils/sftpStore'
 import { PhX, PhPlus } from '@phosphor-icons/vue'
 
 // 会话类型定义
@@ -175,6 +177,15 @@ const getSessionDisplay = (session: Session) => {
   return `本地 | ${shell}`
 }
 
+// 当前活跃的 SSH ID
+const currentSSHId = computed(() => {
+  const activeSession = sessions.value.find(s => s.id === activeSessionId.value)
+  if (activeSession && activeSession.type === 'ssh' && !activeSession.disconnected) {
+    return activeSession.sshId || null
+  }
+  return null
+})
+
 // 处理 SSH 断线
 const handleSSHDisconnected = (sessionId: number) => {
   const session = sessions.value.find(s => s.id === sessionId)
@@ -188,6 +199,9 @@ const handleSSHDisconnected = (sessionId: number) => {
       sshConnected: activeSession?.type === 'ssh' && !activeSession?.disconnected,
       sshHost: activeSession?.host || ''
     })
+
+    // 同步 SSH 断开状态到 SFTP
+    setSSHConnection(null, false)
   }
 }
 
@@ -240,6 +254,9 @@ const handleSSHConnect = async (host: { host: string; port?: number; username: s
       activeSessionId.value = newId
       activeTab.value = 'terminal'
       toast.success(`已连接到 ${host.name || host.host}`)
+
+      // 同步 SSH 连接状态到 SFTP
+      setSSHConnection(sshId, true)
     } else {
       toast.error(`连接失败: ${result.error}`)
     }
@@ -551,6 +568,11 @@ const stopSystemMonitor = () => {
             <!-- SSH 连接面板 -->
             <div class="panel-container" v-show="activeTab === 'ssh'">
               <SSHPanel ref="sshPanelRef" @connect="handleSSHConnect" />
+            </div>
+
+            <!-- SFTP 文件管理面板 -->
+            <div class="panel-container" v-show="activeTab === 'sftp'">
+              <SftpPanel :ssh-id="currentSSHId" />
             </div>
 
             <!-- 设置面板 -->

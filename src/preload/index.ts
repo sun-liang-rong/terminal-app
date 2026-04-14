@@ -9,7 +9,7 @@ console.log('[Preload] contextBridge available:', !!contextBridge)
 
 // 存储每个终端的监听器
 interface ListenerInfo {
-  type: 'data' | 'exit' | 'ssh-data' | 'ssh-close' | 'window-state' | 'ai-stream'
+  type: 'data' | 'exit' | 'ssh-data' | 'ssh-close' | 'window-state' | 'ai-stream' | 'sftp-progress'
   handler: (event: Electron.IpcRendererEvent, data: unknown) => void
 }
 
@@ -87,6 +87,67 @@ interface ElectronAPI {
   // 窗口状态变化监听
   onWindowStateChange: (callback: (state: { maximized: boolean }) => void) => number
   removeWindowStateListener: (id: number) => void
+  // SFTP 文件传输相关
+  sftpList: (options: { sshId: string; path: string }) => Promise<{ success: boolean; items?: SftpItem[]; path?: string; error?: string }>
+  sftpDownload: (options: { sshId: string; remotePath: string; localPath: string }) => Promise<{ success: boolean; error?: string }>
+  sftpUpload: (options: { sshId: string; localPath: string; remotePath: string }) => Promise<{ success: boolean; error?: string }>
+  sftpMkdir: (options: { sshId: string; path: string }) => Promise<{ success: boolean; error?: string }>
+  sftpDelete: (options: { sshId: string; path: string }) => Promise<{ success: boolean; error?: string }>
+  sftpRmdir: (options: { sshId: string; path: string }) => Promise<{ success: boolean; error?: string }>
+  sftpRename: (options: { sshId: string; oldPath: string; newPath: string }) => Promise<{ success: boolean; error?: string }>
+  sftpStat: (options: { sshId: string; path: string }) => Promise<{ success: boolean; info?: SftpItem; error?: string }>
+  sftpClose: (options: { sshId: string }) => Promise<{ success: boolean; error?: string }>
+  onSftpProgress: (callback: (data: SftpProgressData) => void) => number
+  removeSftpProgressListener: (id: number) => void
+  // 本地文件系统相关
+  getHomeDir: () => Promise<string>
+  localList: (path: string) => Promise<{ success: boolean; items?: LocalFileItem[]; path?: string; error?: string }>
+  localMkdir: (path: string) => Promise<{ success: boolean; error?: string }>
+  localDelete: (path: string) => Promise<{ success: boolean; error?: string }>
+  localExists: (path: string) => Promise<boolean>
+  dialogOpen: (options: DialogOptions) => Promise<string[] | null>
+  dialogSave: (options: DialogOptions) => Promise<string | null>
+}
+
+// SFTP 文件项类型
+interface SftpItem {
+  name: string
+  type: 'file' | 'directory' | 'symlink'
+  size: number
+  modifyTime: number
+  accessTime: number
+  permissions: string
+  owner: string
+  group: string
+}
+
+// SFTP 传输进度
+interface SftpProgressData {
+  type: 'upload' | 'download'
+  remotePath: string
+  localPath: string
+  percent: number
+  total: number
+  downloaded?: number
+  uploaded?: number
+}
+
+// 本地文件项类型
+interface LocalFileItem {
+  name: string
+  type: 'file' | 'directory'
+  size: number
+  modifyTime: number
+  path: string
+  isHidden?: boolean
+}
+
+// 文件对话框选项
+interface DialogOptions {
+  title?: string
+  defaultPath?: string
+  filters?: Array<{ name: string; extensions: string[] }>
+  properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'createDirectory'>
 }
 
 // 暴露安全的 API 到渲染进程
@@ -225,7 +286,42 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.removeListener('window-state-change', info.handler)
       listeners.delete(id)
     }
-  }
+  },
+
+  // SFTP 文件传输相关
+  sftpList: (options) => ipcRenderer.invoke('sftp-list', options),
+  sftpDownload: (options) => ipcRenderer.invoke('sftp-download', options),
+  sftpUpload: (options) => ipcRenderer.invoke('sftp-upload', options),
+  sftpMkdir: (options) => ipcRenderer.invoke('sftp-mkdir', options),
+  sftpDelete: (options) => ipcRenderer.invoke('sftp-delete', options),
+  sftpRmdir: (options) => ipcRenderer.invoke('sftp-rmdir', options),
+  sftpRename: (options) => ipcRenderer.invoke('sftp-rename', options),
+  sftpStat: (options) => ipcRenderer.invoke('sftp-stat', options),
+  sftpClose: (options) => ipcRenderer.invoke('sftp-close', options),
+
+  onSftpProgress: (callback: (data: SftpProgressData) => void): number => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as SftpProgressData)
+    ipcRenderer.on('sftp-progress', handler)
+    const id = Date.now() + 6
+    listeners.set(id, { type: 'sftp-progress' as const, handler })
+    return id
+  },
+  removeSftpProgressListener: (id: number): void => {
+    const info = listeners.get(id)
+    if (info && info.type === 'sftp-progress') {
+      ipcRenderer.removeListener('sftp-progress', info.handler)
+      listeners.delete(id)
+    }
+  },
+
+  // 本地文件系统相关
+  getHomeDir: () => ipcRenderer.invoke('get-home-dir'),
+  localList: (path: string) => ipcRenderer.invoke('local-list', path),
+  localMkdir: (path: string) => ipcRenderer.invoke('local-mkdir', path),
+  localDelete: (path: string) => ipcRenderer.invoke('local-delete', path),
+  localExists: (path: string) => ipcRenderer.invoke('local-exists', path),
+  dialogOpen: (options: DialogOptions) => ipcRenderer.invoke('dialog-open', options),
+  dialogSave: (options: DialogOptions) => ipcRenderer.invoke('dialog-save', options)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

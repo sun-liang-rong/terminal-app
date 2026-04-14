@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, safeStorage } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, safeStorage, dialog } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import * as pty from 'node-pty'
@@ -558,6 +558,8 @@ ipcMain.handle('ssh-disconnect', (_event, { id }: { id: string }): SshResult => 
       conn.stream.end()
       conn.client.end()
       sshConnections.delete(id)
+      // 同步清理 SFTP 会话
+      sftpSessions.delete(id)
       return { success: true }
     } catch (error) {
       return { success: false, error: (error as Error).message }
@@ -853,6 +855,19 @@ ipcMain.handle('ai-chat-stream', async (_event, request: AIChatRequest) => {
         }
         break
 
+      case 'openrouter':
+        url = `${(baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '')}/chat/completions`
+        headers['Authorization'] = `Bearer ${apiKey}`
+        // OpenRouter 推荐的 headers 用于来源追踪
+        headers['HTTP-Referer'] = 'https://github.com/neural-terminal'
+        headers['X-Title'] = 'Neural Terminal'
+        body = {
+          model,
+          messages,
+          stream: true
+        }
+        break
+
       case 'custom':
         url = `${(baseUrl || '').replace(/\/$/, '')}/chat/completions`
         if (apiKey) {
@@ -968,4 +983,469 @@ ipcMain.handle('ai-abort-stream', (_event, streamId: string) => {
     }
   }
   return { success: true }
+})
+
+// ===================== SFTP 文件传输相关 =====================
+
+import type { SFTPStream } from 'ssh2'
+
+// SFTP 会话存储（复用 SSH 连接）
+const sftpSessions = new Map<string, SFTPStream>()
+
+interface SftpItem {
+  name: string
+  type: 'file' | 'directory' | 'symlink'
+  size: number
+  modifyTime: number
+  accessTime: number
+  permissions: string
+  owner: string
+  group: string
+}
+
+interface SftpListResult {
+  success: boolean
+  items?: SftpItem[]
+  path?: string
+  error?: string
+}
+
+interface SftpTransferResult {
+  success: boolean
+  error?: string
+}
+
+// 获取或创建 SFTP 会话（复用 SSH 连接）
+const getSftpSession = async (sshId: string): Promise<SFTPStream | null> => {
+  // 如果已有 SFTP 会话，直接返回
+  if (sftpSessions.has(sshId)) {
+    return sftpSessions.get(sshId)!
+  }
+
+  // 从 SSH 连接获取 client
+  const conn = sshConnections.get(sshId)
+  if (!conn) {
+    return null
+  }
+
+  // 创建 SFTP 会话
+  return new Promise((resolve) => {
+    conn.client.sftp((err, sftp) => {
+      if (err) {
+        console.error('[SFTP] Failed to create SFTP session:', err)
+        resolve(null)
+        return
+      }
+      sftpSessions.set(sshId, sftp)
+      console.log('[SFTP] SFTP session created for:', sshId)
+      resolve(sftp)
+    })
+  })
+}
+
+// 列出远程目录内容
+ipcMain.handle('sftp-list', async (_event, { sshId, path }: { sshId: string; path: string }): Promise<SftpListResult> => {
+  const sftp = await getSftpSession(sshId)
+  if (!sftp) {
+    return { success: false, error: 'SFTP 会话不存在，请先连接 SSH' }
+  }
+
+  return new Promise((resolve) => {
+    sftp.readdir(path, (err, list) => {
+      if (err) {
+        resolve({ success: false, error: err.message })
+        return
+      }
+
+      const items: SftpItem[] = list.map(item => {
+        // 解析文件类型
+        let type: 'file' | 'directory' | 'symlink' = 'file'
+        if (item.attrs.isDirectory()) {
+          type = 'directory'
+        } else if (item.attrs.isSymbolicLink()) {
+          type = 'symlink'
+        }
+
+        // 解析权限字符串
+        const mode = item.attrs.mode
+        const permissions = modeToString(mode)
+
+        return {
+          name: item.filename,
+          type,
+          size: item.attrs.size,
+          modifyTime: item.attrs.mtime * 1000,
+          accessTime: item.attrs.atime * 1000,
+          permissions,
+          owner: item.longname?.split(/\s+/)[2] || '',
+          group: item.longname?.split(/\s+/)[3] || ''
+        }
+      })
+
+      resolve({ success: true, items, path })
+    })
+  })
+})
+
+// 权限数字转字符串
+function modeToString(mode: number): string {
+  const types = ['-', 'd', 'l', 'b', 'c', 'p', 's']
+  const typeChar = types[Math.floor(mode / 4096) % 7]
+
+  const permissions = ['r', 'w', 'x', 'r', 'w', 'x', 'r', 'w', 'x']
+  let result = typeChar
+
+  for (let i = 0; i < 9; i++) {
+    const bit = (mode >> (8 - i)) & 1
+    result += bit ? permissions[i] : '-'
+  }
+
+  return result
+}
+
+// 下载文件到本地
+ipcMain.handle('sftp-download', async (_event, { sshId, remotePath, localPath }: { sshId: string; remotePath: string; localPath: string }): Promise<SftpTransferResult> => {
+  const sftp = await getSftpSession(sshId)
+  if (!sftp) {
+    return { success: false, error: 'SFTP 会话不存在' }
+  }
+
+  return new Promise((resolve) => {
+    sftp.fastGet(remotePath, localPath, { step: (total, downloaded) => {
+      // 发送进度更新
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const percent = Math.round((downloaded / total) * 100)
+        mainWindow.webContents.send('sftp-progress', { type: 'download', remotePath, localPath, percent, total, downloaded })
+      }
+    }}, (err) => {
+      if (err) {
+        resolve({ success: false, error: err.message })
+        return
+      }
+      resolve({ success: true })
+    })
+  })
+})
+
+// 上传本地文件到远程
+ipcMain.handle('sftp-upload', async (_event, { sshId, localPath, remotePath }: { sshId: string; localPath: string; remotePath: string }): Promise<SftpTransferResult> => {
+  const sftp = await getSftpSession(sshId)
+  if (!sftp) {
+    return { success: false, error: 'SFTP 会话不存在' }
+  }
+
+  return new Promise((resolve) => {
+    sftp.fastPut(localPath, remotePath, { step: (total, uploaded) => {
+      // 发送进度更新
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const percent = Math.round((uploaded / total) * 100)
+        mainWindow.webContents.send('sftp-progress', { type: 'upload', remotePath, localPath, percent, total, uploaded })
+      }
+    }}, (err) => {
+      if (err) {
+        resolve({ success: false, error: err.message })
+        return
+      }
+      resolve({ success: true })
+    })
+  })
+})
+
+// 创建远程目录
+ipcMain.handle('sftp-mkdir', async (_event, { sshId, path }: { sshId: string; path: string }): Promise<SftpTransferResult> => {
+  const sftp = await getSftpSession(sshId)
+  if (!sftp) {
+    return { success: false, error: 'SFTP 会话不存在' }
+  }
+
+  return new Promise((resolve) => {
+    sftp.mkdir(path, (err) => {
+      if (err) {
+        resolve({ success: false, error: err.message })
+        return
+      }
+      resolve({ success: true })
+    })
+  })
+})
+
+// 删除远程文件
+ipcMain.handle('sftp-delete', async (_event, { sshId, path }: { sshId: string; path: string }): Promise<SftpTransferResult> => {
+  const sftp = await getSftpSession(sshId)
+  if (!sftp) {
+    return { success: false, error: 'SFTP 会话不存在' }
+  }
+
+  return new Promise((resolve) => {
+    sftp.unlink(path, (err) => {
+      if (err) {
+        resolve({ success: false, error: err.message })
+        return
+      }
+      resolve({ success: true })
+    })
+  })
+})
+
+// 删除远程目录（递归）
+ipcMain.handle('sftp-rmdir', async (_event, { sshId, path }: { sshId: string; path: string }): Promise<SftpTransferResult> => {
+  const sftp = await getSftpSession(sshId)
+  if (!sftp) {
+    return { success: false, error: 'SFTP 会话不存在' }
+  }
+
+  // 先尝试简单删除，如果失败则递归删除
+  return new Promise((resolve) => {
+    sftp.rmdir(path, (err) => {
+      if (err) {
+        // 目录非空，需要递归删除
+        if (err.message.includes('not empty') || err.message.includes('Directory not empty')) {
+          resolve({ success: false, error: '目录非空，请先删除目录中的文件' })
+          return
+        }
+        resolve({ success: false, error: err.message })
+        return
+      }
+      resolve({ success: true })
+    })
+  })
+})
+
+// 重命名文件/目录
+ipcMain.handle('sftp-rename', async (_event, { sshId, oldPath, newPath }: { sshId: string; oldPath: string; newPath: string }): Promise<SftpTransferResult> => {
+  const sftp = await getSftpSession(sshId)
+  if (!sftp) {
+    return { success: false, error: 'SFTP 会话不存在' }
+  }
+
+  return new Promise((resolve) => {
+    sftp.rename(oldPath, newPath, (err) => {
+      if (err) {
+        resolve({ success: false, error: err.message })
+        return
+      }
+      resolve({ success: true })
+    })
+  })
+})
+
+// 获取文件详细信息
+ipcMain.handle('sftp-stat', async (_event, { sshId, path }: { sshId: string; path: string }): Promise<{ success: boolean; info?: SftpItem; error?: string }> => {
+  const sftp = await getSftpSession(sshId)
+  if (!sftp) {
+    return { success: false, error: 'SFTP 会话不存在' }
+  }
+
+  return new Promise((resolve) => {
+    sftp.stat(path, (err, stats) => {
+      if (err) {
+        resolve({ success: false, error: err.message })
+        return
+      }
+
+      let type: 'file' | 'directory' | 'symlink' = 'file'
+      if (stats.isDirectory()) {
+        type = 'directory'
+      } else if (stats.isSymbolicLink()) {
+        type = 'symlink'
+      }
+
+      resolve({
+        success: true,
+        info: {
+          name: path.split('/').pop() || path,
+          type,
+          size: stats.size,
+          modifyTime: stats.mtime * 1000,
+          accessTime: stats.atime * 1000,
+          permissions: modeToString(stats.mode),
+          owner: '',
+          group: ''
+        }
+      })
+    })
+  })
+})
+
+// 关闭 SFTP 会话（当 SSH 连接关闭时调用）
+ipcMain.handle('sftp-close', async (_event, { sshId }: { sshId: string }): Promise<SftpTransferResult> => {
+  const sftp = sftpSessions.get(sshId)
+  if (sftp) {
+    sftpSessions.delete(sshId)
+    // SFTP stream 会随 SSH client 关闭自动关闭
+    return { success: true }
+  }
+  return { success: true }
+})
+
+// ===================== 本地文件系统相关 =====================
+
+interface LocalFileItem {
+  name: string
+  type: 'file' | 'directory'
+  size: number
+  modifyTime: number
+  path: string
+  isHidden?: boolean
+}
+
+interface LocalListResult {
+  success: boolean
+  items?: LocalFileItem[]
+  path?: string
+  error?: string
+}
+
+interface LocalMkdirResult {
+  success: boolean
+  error?: string
+}
+
+interface LocalDeleteResult {
+  success: boolean
+  error?: string
+}
+
+// 获取用户主目录
+ipcMain.handle('get-home-dir', (): string => {
+  return os.homedir()
+})
+
+// 列出本地目录内容
+ipcMain.handle('local-list', async (_event, path: string): Promise<LocalListResult> => {
+  try {
+    // 验证路径是否存在
+    if (!fs.existsSync(path)) {
+      return { success: false, error: '路径不存在' }
+    }
+
+    // 验证是否为目录
+    const stats = fs.statSync(path)
+    if (!stats.isDirectory()) {
+      return { success: false, error: '不是有效的目录' }
+    }
+
+    const items: LocalFileItem[] = []
+    const files = fs.readdirSync(path, { withFileTypes: true })
+
+    for (const file of files) {
+      try {
+        const filePath = path.endsWith('/') ? path + file.name : path + '/' + file.name
+        const fileStats = fs.statSync(filePath)
+
+        // 判断是否为隐藏文件 (Windows 和 Unix)
+        const isHidden = file.name.startsWith('.') || (process.platform === 'win32' && fileStats.isHidden?.())
+
+        items.push({
+          name: file.name,
+          type: file.isDirectory() ? 'directory' : 'file',
+          size: file.isDirectory() ? 0 : fileStats.size,
+          modifyTime: fileStats.mtimeMs,
+          path: filePath,
+          isHidden
+        })
+      } catch (e) {
+        // 忽略无法访问的文件
+        console.warn('[Local List] Skip file:', file.name, e)
+      }
+    }
+
+    // 排序: 目录优先，然后按名称排序
+    items.sort((a, b) => {
+      if (a.type === 'directory' && b.type !== 'directory') return -1
+      if (a.type !== 'directory' && b.type === 'directory') return 1
+      return a.name.localeCompare(b.name)
+    })
+
+    return { success: true, items, path }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 创建本地目录
+ipcMain.handle('local-mkdir', async (_event, path: string): Promise<LocalMkdirResult> => {
+  try {
+    // 检查是否已存在
+    if (fs.existsSync(path)) {
+      return { success: false, error: '目录已存在' }
+    }
+
+    fs.mkdirSync(path, { recursive: true })
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 删除本地文件或空目录
+ipcMain.handle('local-delete', async (_event, path: string): Promise<LocalDeleteResult> => {
+  try {
+    if (!fs.existsSync(path)) {
+      return { success: false, error: '文件不存在' }
+    }
+
+    const stats = fs.statSync(path)
+    if (stats.isDirectory()) {
+      // 检查目录是否为空
+      const files = fs.readdirSync(path)
+      if (files.length > 0) {
+        return { success: false, error: '目录非空，请先删除目录中的文件' }
+      }
+      fs.rmdirSync(path)
+    } else {
+      fs.unlinkSync(path)
+    }
+
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 判断路径是否存在
+ipcMain.handle('local-exists', async (_event, path: string): Promise<boolean> => {
+  return fs.existsSync(path)
+})
+
+// 打开文件选择对话框
+ipcMain.handle('dialog-open', async (_event, options: {
+  title?: string
+  defaultPath?: string
+  filters?: Array<{ name: string; extensions: string[] }>
+  properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'createDirectory'>
+}): Promise<string[] | null> => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      title: options.title || '选择文件',
+      defaultPath: options.defaultPath,
+      filters: options.filters || [{ name: '所有文件', extensions: ['*'] }],
+      properties: options.properties || ['openFile']
+    })
+
+    return result.canceled ? null : result.filePaths
+  } catch (error) {
+    console.error('[Dialog Open] Error:', error)
+    return null
+  }
+})
+
+// 打开保存文件对话框
+ipcMain.handle('dialog-save', async (_event, options: {
+  title?: string
+  defaultPath?: string
+  filters?: Array<{ name: string; extensions: string[] }>
+}): Promise<string | null> => {
+  try {
+    const result = await dialog.showSaveDialog(mainWindow!, {
+      title: options.title || '保存文件',
+      defaultPath: options.defaultPath,
+      filters: options.filters || [{ name: '所有文件', extensions: ['*'] }]
+    })
+
+    return result.canceled ? null : result.filePath
+  } catch (error) {
+    console.error('[Dialog Save] Error:', error)
+    return null
+  }
 })

@@ -68,6 +68,47 @@ interface SshHost {
   protocol: string
 }
 
+// SFTP 文件项类型
+interface SftpItem {
+  name: string
+  type: 'file' | 'directory' | 'symlink'
+  size: number
+  modifyTime: number
+  accessTime: number
+  permissions: string
+  owner: string
+  group: string
+}
+
+// SFTP 传输进度
+interface SftpProgressData {
+  type: 'upload' | 'download'
+  remotePath: string
+  localPath: string
+  percent: number
+  total: number
+  downloaded?: number
+  uploaded?: number
+}
+
+// 本地文件项类型
+interface LocalFileItem {
+  name: string
+  type: 'file' | 'directory'
+  size: number
+  modifyTime: number
+  path: string
+  isHidden?: boolean
+}
+
+// 文件对话框选项
+interface DialogOptions {
+  title?: string
+  defaultPath?: string
+  filters?: Array<{ name: string; extensions: string[] }>
+  properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'createDirectory'>
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -138,8 +179,30 @@ declare global {
       isMaximized: () => Promise<boolean>
       onWindowStateChange: (callback: (state: { maximized: boolean }) => void) => number
       removeWindowStateListener: (id: number) => void
+
+      // SFTP 文件传输相关
+      sftpList: (options: { sshId: string; path: string }) => Promise<{ success: boolean; items?: SftpItem[]; path?: string; error?: string }>
+      sftpDownload: (options: { sshId: string; remotePath: string; localPath: string }) => Promise<{ success: boolean; error?: string }>
+      sftpUpload: (options: { sshId: string; localPath: string; remotePath: string }) => Promise<{ success: boolean; error?: string }>
+      sftpMkdir: (options: { sshId: string; path: string }) => Promise<{ success: boolean; error?: string }>
+      sftpDelete: (options: { sshId: string; path: string }) => Promise<{ success: boolean; error?: string }>
+      sftpRmdir: (options: { sshId: string; path: string }) => Promise<{ success: boolean; error?: string }>
+      sftpRename: (options: { sshId: string; oldPath: string; newPath: string }) => Promise<{ success: boolean; error?: string }>
+      sftpStat: (options: { sshId: string; path: string }) => Promise<{ success: boolean; info?: SftpItem; error?: string }>
+      sftpClose: (options: { sshId: string }) => Promise<{ success: boolean; error?: string }>
+      onSftpProgress: (callback: (data: SftpProgressData) => void) => number
+      removeSftpProgressListener: (id: number) => void
+
+      // 本地文件系统相关
+      getHomeDir: () => Promise<string>
+      localList: (path: string) => Promise<{ success: boolean; items?: LocalFileItem[]; path?: string; error?: string }>
+      localMkdir: (path: string) => Promise<{ success: boolean; error?: string }>
+      localDelete: (path: string) => Promise<{ success: boolean; error?: string }>
+      localExists: (path: string) => Promise<boolean>
+      dialogOpen: (options: DialogOptions) => Promise<string[] | null>
+      dialogSave: (options: DialogOptions) => Promise<string | null>
     }
   }
 }
 
-export { SystemInfo, SshConfig, EncryptResult, DecryptResult, StorageResult, SshHost }
+export { SystemInfo, SshConfig, EncryptResult, DecryptResult, StorageResult, SshHost, SftpItem, SftpProgressData, LocalFileItem, DialogOptions }

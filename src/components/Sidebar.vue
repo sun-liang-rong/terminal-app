@@ -32,6 +32,8 @@
             <PhComputerTower v-if="item.icon === 'ssh'" class="nav-icon" weight="regular" />
             <!-- 本地终端图标 -->
             <PhTerminal v-else-if="item.icon === 'terminal'" class="nav-icon" weight="regular" />
+            <!-- SFTP 文件管理图标 -->
+            <PhFolderOpen v-else-if="item.icon === 'sftp'" class="nav-icon" weight="regular" />
           </div>
           <Transition name="nav-label">
             <span class="nav-label" v-if="!isCollapsed">{{ item.label }}</span>
@@ -66,7 +68,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { layoutState, setSidebarCollapsed } from '../utils/layoutStore'
-import { PhTerminal, PhComputerTower, PhQuestion, PhCheckCircle, PhCaretDoubleLeft } from '@phosphor-icons/vue'
+import { PhTerminal, PhComputerTower, PhQuestion, PhCheckCircle, PhCaretDoubleLeft, PhFolderOpen } from '@phosphor-icons/vue'
 
 const props = defineProps({
   activeTab: {
@@ -111,6 +113,11 @@ const navItems = ref([
     id: 'terminal',
     label: '本地终端',
     icon: 'terminal'
+  },
+  {
+    id: 'sftp',
+    label: 'SFTP 管理',
+    icon: 'sftp'
   }
 ])
 </script>

@@ -129,7 +129,7 @@
                     :key="provider.value"
                     class="provider-btn"
                     :class="{ active: modelForm.provider === provider.value }"
-                    @click="modelForm.provider = provider.value as 'openai' | 'claude' | 'ollama' | 'custom'"
+                    @click="modelForm.provider = provider.value as 'openai' | 'claude' | 'ollama' | 'custom' | 'openrouter'"
                   >
                     {{ provider.label }}
                   </button>
@@ -146,6 +146,7 @@
                   <span v-if="modelForm.provider === 'openai'">常用：gpt-4o, gpt-4o-mini, gpt-4-turbo</span>
                   <span v-else-if="modelForm.provider === 'claude'">常用：claude-3-5-sonnet-20241022, claude-3-opus-20240229</span>
                   <span v-else-if="modelForm.provider === 'ollama'">常用：llama3, llama3.1, qwen2, mistral</span>
+                  <span v-else-if="modelForm.provider === 'openrouter'">常用：openai/gpt-4o, anthropic/claude-3.5-sonnet, google/gemini-pro-1.5</span>
                   <span v-else>请输入模型 ID</span>
                 </div>
               </div>
@@ -162,7 +163,7 @@
                 <input
                   type="text"
                   v-model="modelForm.baseUrl"
-                  :placeholder="modelForm.provider === 'ollama' ? 'http://localhost:11434' : 'https://api.openai.com/v1'"
+                  :placeholder="modelForm.provider === 'openrouter' ? 'https://openrouter.ai/api/v1' : modelForm.provider === 'ollama' ? 'http://localhost:11434' : 'https://api.openai.com/v1'"
                 />
               </div>
             </div>
@@ -451,7 +452,7 @@ const editingModel = ref<AIModelConfig | null>(null)
 
 const modelForm = reactive({
   name: '',
-  provider: 'openai' as 'openai' | 'claude' | 'ollama' | 'custom',
+  provider: 'openai' as 'openai' | 'claude' | 'ollama' | 'custom' | 'openrouter',
   model: '',
   apiKey: '',
   baseUrl: ''
@@ -461,6 +462,7 @@ const providerOptions = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'claude', label: 'Claude' },
   { value: 'ollama', label: 'Ollama' },
+  { value: 'openrouter', label: 'OpenRouter' },
   { value: 'custom', label: '自定义' }
 ]
 
@@ -469,6 +471,7 @@ const getProviderLabel = (provider: string) => {
     openai: 'OpenAI',
     claude: 'Claude',
     ollama: 'Ollama',
+    openrouter: 'OpenRouter',
     custom: '自定义'
   }
   return labels[provider] || provider

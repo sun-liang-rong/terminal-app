@@ -5,7 +5,7 @@ import { ref, watch } from 'vue'
 export interface AIModelConfig {
   id: string
   name: string
-  provider: 'openai' | 'claude' | 'ollama' | 'custom'
+  provider: 'openai' | 'claude' | 'ollama' | 'custom' | 'openrouter'
   apiKey?: string
   baseUrl?: string
   model: string
@@ -35,6 +35,14 @@ const defaultModels: AIModelConfig[] = [
     model: 'llama3',
     baseUrl: 'http://localhost:11434',
     icon: 'local'
+  },
+  {
+    id: 'openrouter-gpt-4o',
+    name: 'GPT-4o (OpenRouter)',
+    provider: 'openrouter',
+    model: 'openai/gpt-4o',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    icon: 'gpt'
   }
 ]
 

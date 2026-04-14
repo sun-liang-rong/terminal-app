@@ -9,10 +9,11 @@
   >
     <template #default="{ item, index, active }">
       <DynamicScrollerItem
+        v-if="item && item.id"
         :item="item"
         :active="active"
         :data-index="index"
-        :size-dependencies="[item.content]"
+        :size-dependencies="[item.content, item.id]"
       >
         <ChatMessageItem
           :message="item"
@@ -47,7 +48,8 @@ const scrollerRef = ref<any>(null)
 
 // 合并普通消息和流式消息
 const messagesWithStreaming = computed(() => {
-  const msgs = [...props.messages]
+  // 确保 base messages 不为空且有效
+  const msgs = props.messages.filter(m => m && m.id)
   if (props.isStreaming && props.streamingMessage) {
     msgs.push({
       id: 'streaming',
@@ -63,8 +65,12 @@ const messagesWithStreaming = computed(() => {
 // 滚动到底部
 const scrollToBottom = () => {
   nextTick(() => {
-    if (scrollerRef.value) {
-      scrollerRef.value.scrollToBottom()
+    try {
+      if (scrollerRef.value && scrollerRef.value.scrollToBottom) {
+        scrollerRef.value.scrollToBottom()
+      }
+    } catch (e) {
+      console.warn('[VirtualMessageList] scrollToBottom error:', e)
     }
   })
 }
@@ -72,8 +78,12 @@ const scrollToBottom = () => {
 // 滚动到顶部
 const scrollToTop = () => {
   nextTick(() => {
-    if (scrollerRef.value) {
-      scrollerRef.value.scrollToItem(0)
+    try {
+      if (scrollerRef.value && scrollerRef.value.scrollToItem) {
+        scrollerRef.value.scrollToItem(0)
+      }
+    } catch (e) {
+      console.warn('[VirtualMessageList] scrollToTop error:', e)
     }
   })
 }
@@ -81,8 +91,12 @@ const scrollToTop = () => {
 // 滚动到指定消息
 const scrollToItem = (index: number) => {
   nextTick(() => {
-    if (scrollerRef.value) {
-      scrollerRef.value.scrollToItem(index)
+    try {
+      if (scrollerRef.value && scrollerRef.value.scrollToItem) {
+        scrollerRef.value.scrollToItem(index)
+      }
+    } catch (e) {
+      console.warn('[VirtualMessageList] scrollToItem error:', e)
     }
   })
 }
