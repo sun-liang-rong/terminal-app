@@ -9,8 +9,11 @@
           <div class="guide-logo">
             <img src="/favicon.svg" alt="Logo" class="logo-icon" />
           </div>
-          <h2 class="guide-title">欢迎使用神经终端</h2>
-          <p class="guide-subtitle">高效、智能的现代化终端体验</p>
+          <h2 class="guide-title">
+            <span style="color: var(--cyber-cyan, #00ffff); text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);">NEURAL</span>
+            <span style="color: var(--cyber-magenta, #ff00ff); text-shadow: 0 0 10px rgba(255, 0, 255, 0.5); margin-left: 8px;">TERMINAL</span>
+          </h2>
+          <p class="guide-subtitle">高效 · 智能 · 现代化</p>
 
           <div class="guide-divider"></div>
 
@@ -678,8 +681,8 @@ function processSimulatedCommand(cmd: string) {
   padding: 0;
   margin: 0;
   overflow: hidden;
-  box-shadow: var(--terminal-glow);
-  /* 让 xterm 自己控制背景色 */
+  border: 1px solid var(--cyber-border-cyan, rgba(0, 255, 255, 0.3));
+  box-shadow: var(--cyber-glow-card, 0 0 30px rgba(0, 255, 255, 0.1));
   background: transparent;
 }
 
@@ -693,7 +696,7 @@ function processSimulatedCommand(cmd: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(10, 10, 18, 0.95);
   backdrop-filter: var(--blur-md, blur(20px));
   z-index: 10;
   cursor: pointer;
@@ -708,7 +711,7 @@ function processSimulatedCommand(cmd: string) {
   text-align: center;
 }
 
-/* Logo - 入场动画 */
+/* Logo - Cyberpunk 渐变发光 */
 .guide-logo {
   margin-bottom: 20px;
   animation: logo-enter 400ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
@@ -724,20 +727,22 @@ function processSimulatedCommand(cmd: string) {
 }
 
 .guide-logo .logo-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--cyber-cyan, #00ffff) 0%, var(--cyber-magenta, #ff00ff) 100%);
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
   object-fit: contain;
-  box-shadow: var(--shadow-primary);
 }
 
-/* 标题 - 交错入场 */
+/* 标题 - Cyberpunk 双色 */
 .guide-title {
   font-size: 22px;
   font-weight: 600;
-  color: var(--color-text-primary, #f5f5f7);
+  color: var(--cyber-cyan, #00ffff);
   margin-bottom: 6px;
-  letter-spacing: -0.3px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
   animation: text-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 100ms forwards;
   opacity: 0;
   transform: translateY(10px);
@@ -745,7 +750,7 @@ function processSimulatedCommand(cmd: string) {
 
 .guide-subtitle {
   font-size: 13px;
-  color: var(--color-text-tertiary, #6e6e73);
+  color: var(--color-text-tertiary, rgba(255, 255, 255, 0.5));
   margin-bottom: 24px;
   animation: text-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 150ms forwards;
   opacity: 0;
@@ -759,11 +764,11 @@ function processSimulatedCommand(cmd: string) {
   }
 }
 
-/* 分隔线 */
+/* 分隔线 - Cyberpunk 三色渐变 */
 .guide-divider {
-  width: 100%;
+  width: 200px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-border-default, rgba(255, 255, 255, 0.12)), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.5), rgba(255, 0, 255, 0.5), transparent);
   margin-bottom: 24px;
   animation: divider-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 200ms forwards;
   opacity: 0;
@@ -777,11 +782,11 @@ function processSimulatedCommand(cmd: string) {
   }
 }
 
-/* 操作项 - 交错入场 */
+/* 操作项 - Cyberpunk 配色卡片 */
 .guide-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   margin-bottom: 24px;
 }
@@ -791,9 +796,9 @@ function processSimulatedCommand(cmd: string) {
   align-items: center;
   gap: 14px;
   padding: 12px 16px;
-  background: var(--color-bg-surface, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-md, 10px);
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: 10px;
   transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
   text-align: left;
   animation: action-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
@@ -801,9 +806,21 @@ function processSimulatedCommand(cmd: string) {
   transform: translateX(-20px);
 }
 
-.action-item:nth-child(1) { animation-delay: 250ms; }
-.action-item:nth-child(2) { animation-delay: 300ms; }
-.action-item:nth-child(3) { animation-delay: 350ms; }
+.action-item:nth-child(1) {
+  animation-delay: 250ms;
+  background: rgba(0, 255, 255, 0.05);
+  border-color: rgba(0, 255, 255, 0.2);
+}
+.action-item:nth-child(2) {
+  animation-delay: 300ms;
+  background: rgba(255, 0, 255, 0.05);
+  border-color: rgba(255, 0, 255, 0.2);
+}
+.action-item:nth-child(3) {
+  animation-delay: 350ms;
+  background: rgba(0, 255, 136, 0.05);
+  border-color: rgba(0, 255, 136, 0.2);
+}
 
 @keyframes action-enter {
   to {
@@ -813,65 +830,85 @@ function processSimulatedCommand(cmd: string) {
 }
 
 .action-item:hover {
-  background: var(--color-bg-elevated, rgba(255, 255, 255, 0.08));
-  border-color: var(--color-border-default, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.08);
   transform: translateX(4px);
+}
+
+.action-item:nth-child(1):hover {
+  border-color: rgba(0, 255, 255, 0.4);
+}
+.action-item:nth-child(2):hover {
+  border-color: rgba(255, 0, 255, 0.4);
+}
+.action-item:nth-child(3):hover {
+  border-color: rgba(0, 255, 136, 0.4);
 }
 
 .action-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: rgba(183, 159, 255, 0.1);
-  border-radius: var(--radius-md, 10px);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   flex-shrink: 0;
+}
+
+.action-item:nth-child(1) .action-icon {
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: var(--cyber-cyan, #00ffff);
+}
+
+.action-item:nth-child(2) .action-icon {
+  background: rgba(255, 0, 255, 0.1);
+  border: 1px solid rgba(255, 0, 255, 0.3);
+  color: var(--cyber-magenta, #ff00ff);
+}
+
+.action-item:nth-child(3) .action-icon {
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: var(--cyber-green, #00ff88);
 }
 
 .action-icon i {
   font-size: 16px;
-  color: var(--color-primary);
-}
-
-.action-icon.ai {
-  background: rgba(255, 134, 195, 0.1);
 }
 
 .action-icon.ai i {
-  color: var(--color-tertiary);
+  color: var(--cyber-magenta, #ff00ff);
 }
 
 .action-icon .key-badge {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--color-primary);
   letter-spacing: 0.3px;
 }
 
 .action-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .action-title {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-primary, #f5f5f7);
+  color: var(--color-text-primary, #ffffff);
 }
 
 .action-desc {
   font-size: 11px;
-  color: var(--color-text-tertiary, #6e6e73);
+  color: rgba(255, 255, 255, 0.5);
 }
 
-/* 快捷键 - 入场动画 */
+/* 快捷键 - Cyberpunk Cyan 边框 */
 .guide-shortcuts {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 24px;
   animation: shortcuts-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 400ms forwards;
   opacity: 0;
@@ -886,25 +923,25 @@ function processSimulatedCommand(cmd: string) {
 .shortcut {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: var(--color-text-tertiary, #6e6e73);
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .shortcut kbd {
-  padding: 2px 5px;
-  background: var(--color-bg-surface, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.12));
-  border-radius: 3px;
-  font-size: 9px;
+  padding: 4px 8px;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 10px;
   font-family: inherit;
-  color: var(--color-text-secondary, #a1a1a6);
+  color: var(--cyber-cyan, #00ffff);
 }
 
 /* 提示 */
 .guide-hint {
   font-size: 11px;
-  color: var(--color-text-disabled, #48484a);
+  color: rgba(255, 255, 255, 0.3);
   animation: hint-enter 300ms cubic-bezier(0.25, 1, 0.5, 1) 500ms forwards;
   opacity: 0;
 }
@@ -972,13 +1009,13 @@ function processSimulatedCommand(cmd: string) {
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: var(--color-border-default, rgba(255, 255, 255, 0.12));
+  background: var(--cyber-border-cyan, rgba(0, 255, 255, 0.3));
   border-radius: 3px;
   transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .terminal :deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
-  background: var(--color-secondary);
+  background: var(--cyber-cyan, #00ffff);
 }
 
 /* 滚动条角落 */

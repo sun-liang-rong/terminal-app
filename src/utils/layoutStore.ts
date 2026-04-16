@@ -10,7 +10,12 @@ export interface LayoutSettings {
   customThemeColor: string | null
   compactMode: boolean
   assistantPanelVisible: boolean
+  assistantPanelWidth: number
 }
+
+// AI面板宽度限制常量
+export const ASSISTANT_PANEL_MIN_WIDTH = 280
+export const ASSISTANT_PANEL_MAX_WIDTH = 600
 
 // 默认设置
 const defaultSettings: LayoutSettings = {
@@ -20,7 +25,8 @@ const defaultSettings: LayoutSettings = {
   statusBarHeight: 28,
   customThemeColor: null,
   compactMode: false,
-  assistantPanelVisible: true
+  assistantPanelVisible: true,
+  assistantPanelWidth: 320
 }
 
 // 存储键
@@ -235,6 +241,12 @@ export const toggleAssistantPanel = () => {
 // 设置AI面板显示状态
 export const setAssistantPanelVisible = (visible: boolean) => {
   layoutState.value.assistantPanelVisible = visible
+}
+
+// 设置AI面板宽度
+export const setAssistantPanelWidth = (width: number) => {
+  const clampedWidth = Math.max(ASSISTANT_PANEL_MIN_WIDTH, Math.min(ASSISTANT_PANEL_MAX_WIDTH, width))
+  layoutState.value.assistantPanelWidth = clampedWidth
 }
 
 // 重置设置

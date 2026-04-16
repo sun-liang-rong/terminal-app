@@ -1,0 +1,89 @@
+<h2>欢迎页设计</h2>
+<p class="subtitle">用户首次打开终端时看到的引导界面</p>
+
+<div class="mockup">
+  <div class="mockup-header">空态引导层 - Cyberpunk 风格</div>
+  <div class="mockup-body" style="background: rgba(0,0,0,0.95); padding: 24px; border-radius: 0 0 8px 8px; min-height: 400px;">
+    <!-- 欢迎页内容 -->
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
+      <!-- Logo -->
+      <div style="width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, #00ffff 0%, #ff00ff 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 40px rgba(0,255,255,0.3);">
+        <span style="color: #000; font-weight: bold; font-size: 24px;">◈</span>
+      </div>
+
+      <!-- 标题 -->
+      <h2 style="color: #fff; margin-top: 20px; font-size: 20px; letter-spacing: 2px;">
+        <span style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.5);">NEURAL</span>
+        <span style="color: #ff00ff; text-shadow: 0 0 10px rgba(255,0,255,0.5);">TERMINAL</span>
+      </h2>
+      <p style="color: rgba(255,255,255,0.5); margin-top: 8px; font-size: 12px;">高效 · 智能 · 现代化</p>
+
+      <!-- 分隔线 -->
+      <div style="width: 200px; height: 1px; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.5), rgba(255,0,255,0.5), transparent); margin: 24px 0;"></div>
+
+      <!-- 操作卡片 -->
+      <div style="display: flex; flex-direction: column; gap: 12px; width: 320px;">
+        <div style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(0,255,255,0.05); border: 1px solid rgba(0,255,255,0.2); border-radius: 8px;">
+          <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,255,255,0.3); border-radius: 8px; color: #00ffff; font-size: 18px;">⌨</div>
+          <div>
+            <div style="color: #fff; font-size: 13px;">输入命令</div>
+            <div style="color: rgba(255,255,255,0.5); font-size: 11px;">直接开始使用</div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(255,0,255,0.05); border: 1px solid rgba(255,0,255,0.2); border-radius: 8px;">
+          <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,0,255,0.3); border-radius: 8px; color: #ff00ff; font-size: 18px;">◇</div>
+          <div>
+            <div style="color: #fff; font-size: 13px;">AI 助手</div>
+            <div style="color: rgba(255,255,255,0.5); font-size: 11px;">智能帮助与建议</div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 8px;">
+          <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,255,136,0.3); border-radius: 8px; color: #00ff88; font-size: 12px; font-weight: bold;">⌘K</div>
+          <div>
+            <div style="color: #fff; font-size: 13px;">命令面板</div>
+            <div style="color: rgba(255,255,255,0.5); font-size: 11px;">快速搜索与执行</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷键 -->
+      <div style="display: flex; gap: 16px; margin-top: 24px; font-size: 11px; color: rgba(255,255,255,0.4);">
+        <span><kbd style="padding: 2px 6px; background: rgba(0,255,255,0.1); border: 1px solid rgba(0,255,255,0.2); border-radius: 4px;">Ctrl+T</kbd> 新建</span>
+        <span><kbd style="padding: 2px 6px; background: rgba(0,255,255,0.1); border: 1px solid rgba(0,255,255,0.2); border-radius: 4px;">Ctrl+W</kbd> 关闭</span>
+        <span><kbd style="padding: 2px 6px; background: rgba(0,255,255,0.1); border: 1px solid rgba(0,255,255,0.2); border-radius: 4px;">Ctrl+1-9</kbd> 切换</span>
+      </div>
+
+      <!-- 提示 -->
+      <p style="color: rgba(255,255,255,0.3); margin-top: 20px; font-size: 11px;">点击或输入命令开始</p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <p class="label">设计亮点</p>
+  <ul style="color: #888; margin-top: 8px; padding-left: 20px; font-size: 13px;">
+    <li>Logo 渐变 + 外发光，赛博朋克标志性视觉</li>
+    <li>标题双色拼接，强化品牌识别</li>
+    <li>操作卡片每项独立配色，视觉区分清晰</li>
+    <li>分隔线三色渐变，呼应整体配色</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top: 24px;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>喜欢欢迎页设计</h3>
+      <p>继续看系统监控区设计</p>
+    </div>
+  </div>
+  <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>需要调整</h3>
+      <p>告诉我想法</p>
+    </div>
+  </div>
+</div>

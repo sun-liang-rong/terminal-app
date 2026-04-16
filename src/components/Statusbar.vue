@@ -115,11 +115,11 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 0 16px;
-  background: var(--color-surface-container-lowest, #000000);
-  border-top: 1px solid var(--color-outline-variant, #46484d);
-  border-color: rgba(70, 72, 77, 0.15);
+  background: rgba(10, 10, 18, 0.9);
+  border-top: 1px solid rgba(0, 255, 255, 0.2);
   z-index: 50;
   font-family: var(--font-mono, 'Fira Code', monospace);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.05);
 }
 
 /* 左侧状态 */
@@ -133,12 +133,13 @@ onUnmounted(() => {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--color-on-surface-variant, #aaabb0);
+  color: rgba(255, 255, 255, 0.5);
   margin: 0;
 }
 
 .status-value {
-  color: var(--color-secondary, #2db7f2);
+  color: var(--cyber-cyan, #00ffff);
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
 /* 连接指示器 */
@@ -155,12 +156,13 @@ onUnmounted(() => {
 }
 
 .status-dot.online {
-  background: var(--color-secondary, #2db7f2);
-  box-shadow: 0 0 5px rgba(45, 183, 242, 0.8);
+  background: var(--cyber-green, #00ff88);
+  box-shadow: 0 0 6px var(--cyber-green, #00ff88);
 }
 
 .status-dot.offline {
-  background: var(--color-error, #ff6e84);
+  background: var(--cyber-red, #ff0055);
+  box-shadow: 0 0 6px var(--cyber-red, #ff0055);
 }
 
 .connection-text {
@@ -170,11 +172,12 @@ onUnmounted(() => {
 }
 
 .connection-text.online {
-  color: var(--color-secondary, #2db7f2);
+  color: var(--cyber-green, #00ff88);
+  text-shadow: 0 0 5px rgba(0, 255, 136, 0.3);
 }
 
 .connection-text.offline {
-  color: var(--color-error, #ff6e84);
+  color: var(--cyber-red, #ff0055);
 }
 
 /* 右侧信息 */
@@ -188,19 +191,24 @@ onUnmounted(() => {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--color-on-surface-variant, #aaabb0);
+  color: rgba(255, 255, 255, 0.5);
   cursor: default;
   transition: color 0.15s ease;
 }
 
 .status-item:hover {
-  color: var(--color-on-surface, #f6f6fc);
+  color: var(--cyber-cyan, #00ffff);
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
 .git-info {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.git-info:hover {
+  color: var(--cyber-magenta, #ff00ff);
 }
 
 .git-icon {

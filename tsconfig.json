@@ -9,7 +9,7 @@
     "resolveJsonModule": true,
     "declaration": false,
     "outDir": "dist-electron",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

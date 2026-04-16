@@ -7,7 +7,9 @@
           <img src="/favicon.svg" alt="Logo" class="logo-img" />
         </div>
         <div class="logo-text" v-if="!isCollapsed">
-          <h2 class="logo-title">终端MVP</h2>
+          <h2 class="logo-title">
+            <span style="color: var(--cyber-cyan, #00ffff);">NEURAL</span>
+          </h2>
         </div>
       </div>
     </div>
@@ -42,18 +44,6 @@
       </div>
     </nav>
 
-    <!-- 底部操作 -->
-    <div class="sidebar-footer" v-if="!isCollapsed">
-      <button class="footer-item" @click="$emit('tab-change', 'help')">
-        <PhQuestion class="footer-icon" weight="regular" />
-        <span>帮助</span>
-      </button>
-      <button class="footer-item" @click="$emit('tab-change', 'status')">
-        <PhCheckCircle class="footer-icon" weight="regular" />
-        <span>状态</span>
-      </button>
-    </div>
-
     <!-- 折叠按钮 -->
     <button
       class="collapse-btn"
@@ -68,7 +58,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { layoutState, setSidebarCollapsed } from '../utils/layoutStore'
-import { PhTerminal, PhComputerTower, PhQuestion, PhCheckCircle, PhCaretDoubleLeft, PhFolderOpen } from '@phosphor-icons/vue'
+import { PhTerminal, PhComputerTower, PhCaretDoubleLeft, PhFolderOpen } from '@phosphor-icons/vue'
 
 const props = defineProps({
   activeTab: {
@@ -129,7 +119,7 @@ const navItems = ref([
   width: 256px;
   min-width: 256px;
   height: 100vh;
-  background: rgba(17, 19, 24, 0.6);
+  background: rgba(10, 10, 18, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   padding: 12px 16px 24px 16px;
@@ -138,7 +128,8 @@ const navItems = ref([
   top: 0;
   z-index: 50;
   transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
+  border-right: 1px solid rgba(0, 255, 255, 0.2);
 }
 
 .sidebar.collapsed {
@@ -167,12 +158,13 @@ const navItems = ref([
 .logo-icon {
   width: 20px;
   height: 20px;
-  background: linear-gradient(135deg, var(--color-primary, #b79fff) 0%, var(--color-primary-container, #ab8ffe) 100%);
+  background: linear-gradient(135deg, var(--cyber-cyan, #00ffff) 0%, var(--cyber-magenta, #ff00ff) 100%);
   border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
 }
 
 .logo-img {
@@ -192,10 +184,11 @@ const navItems = ref([
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-headline, 'Space Grotesk', sans-serif);
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-on-surface, #f6f6fc);
-  letter-spacing: -0.2px;
+  color: var(--cyber-cyan, #00ffff);
+  letter-spacing: 2px;
   line-height: 1;
   margin: 0;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
 /* ========== Navigation ========== */
@@ -217,8 +210,9 @@ const navItems = ref([
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: var(--color-on-surface-variant, #aaabb0);
+  color: var(--cyber-cyan, #00ffff);
   padding: 0 12px 8px;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
 /* ========== Nav Items ========== */
@@ -231,9 +225,9 @@ const navItems = ref([
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
-  color: var(--color-on-surface-variant, #aaabb0);
+  color: rgba(255, 255, 255, 0.6);
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   font-family: inherit;
   text-align: left;
   width: 100%;
@@ -245,14 +239,16 @@ const navItems = ref([
 }
 
 .nav-item:hover {
-  background: rgba(29, 32, 37, 0.5);
-  color: var(--color-on-surface, #f6f6fc);
+  background: rgba(0, 255, 255, 0.05);
+  color: var(--cyber-cyan, #00ffff);
+  border-color: rgba(0, 255, 255, 0.2);
 }
 
 .nav-item.active {
-  background: rgba(29, 32, 37, 0.8);
-  color: var(--color-on-surface, #f6f6fc);
-  box-shadow: 0 0 10px rgba(45, 183, 242, 0.15), inset 0 0 0 1px rgba(45, 183, 242, 0.2);
+  background: rgba(0, 255, 255, 0.1);
+  color: var(--cyber-cyan, #00ffff);
+  border-color: rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
 }
 
 .nav-icon-wrapper {
@@ -271,48 +267,16 @@ const navItems = ref([
   flex-shrink: 0;
 }
 
+.nav-item.active .nav-icon {
+  filter: drop-shadow(0 0 4px rgba(0, 255, 255, 0.5));
+}
+
 .nav-label {
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.1px;
   white-space: nowrap;
   font-family: var(--font-body, 'Inter', sans-serif);
-}
-
-/* ========== Footer ========== */
-.sidebar-footer {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(70, 72, 77, 0.15);
-}
-
-.footer-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  color: var(--color-on-surface-variant, #aaabb0);
-  background: transparent;
-  border: none;
-  font-family: inherit;
-  text-align: left;
-  font-size: 13px;
-}
-
-.footer-item:hover {
-  color: var(--color-on-surface, #f6f6fc);
-}
-
-.footer-icon {
-  width: 20px;
-  height: 20px;
-  opacity: 0.8;
 }
 
 /* ========== Collapse Button ========== */
@@ -323,14 +287,14 @@ const navItems = ref([
   transform: translateY(-50%);
   width: 24px;
   height: 48px;
-  background: rgba(35, 38, 44, 0.8);
-  border: 1px solid rgba(70, 72, 77, 0.3);
+  background: rgba(10, 10, 18, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.3);
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--color-on-surface-variant, #aaabb0);
+  color: var(--cyber-cyan, #00ffff);
   transition: all 0.15s ease;
   opacity: 0;
 }
@@ -340,9 +304,9 @@ const navItems = ref([
 }
 
 .collapse-btn:hover {
-  background: rgba(45, 183, 242, 0.1);
-  border-color: rgba(45, 183, 242, 0.3);
-  color: var(--color-secondary, #2db7f2);
+  background: rgba(0, 255, 255, 0.1);
+  border-color: rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
 }
 
 .collapse-icon {

@@ -357,6 +357,9 @@
       </button>
       <div class="save-hint">更改自动保存</div>
     </div>
+
+    <!-- 删除确认弹窗 -->
+    <Modal ref="deleteModalRef" type="confirm" title="删除模型" message="确定要删除此模型配置吗？此操作无法撤销。" confirmText="删除" />
   </div>
 </template>
 
@@ -378,6 +381,7 @@ import {
   PhCpu,
   PhInfo
 } from '@phosphor-icons/vue'
+import Modal from './Modal.vue'
 import {
   initSettings,
   getSettings,
@@ -449,6 +453,8 @@ const cursorStyleLabels: Record<string, string> = {
 const aiModels = computed(() => aiModelsState.value)
 const showModelModal = ref(false)
 const editingModel = ref<AIModelConfig | null>(null)
+const deleteModalRef = ref<InstanceType<typeof Modal> | null>(null)
+const pendingDeleteId = ref<string | null>(null)
 
 const modelForm = reactive({
   name: '',
@@ -522,9 +528,14 @@ const saveModel = () => {
   closeModelModal()
 }
 
-const deleteModel = (id: string) => {
+const deleteModel = async (id: string) => {
   if (aiModels.value.length > 1) {
-    removeAIModel(id)
+    pendingDeleteId.value = id
+    const confirmed = await deleteModalRef.value?.show()
+    if (confirmed && pendingDeleteId.value) {
+      removeAIModel(pendingDeleteId.value)
+    }
+    pendingDeleteId.value = null
   }
 }
 

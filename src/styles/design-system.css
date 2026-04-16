@@ -6,6 +6,27 @@
 :root {
   /* === Nocturnal 色彩系统 === */
 
+  /* === Cyberpunk 色彩系统 === */
+  --cyber-cyan: #00ffff;
+  --cyber-cyan-rgb: 0, 255, 255;
+  --cyber-magenta: #ff00ff;
+  --cyber-magenta-rgb: 255, 0, 255;
+  --cyber-green: #00ff88;
+  --cyber-green-rgb: 0, 255, 136;
+  --cyber-red: #ff0055;
+  --cyber-red-rgb: 255, 0, 85;
+
+  /* Cyberpunk 边框光效 */
+  --cyber-border-cyan: rgba(0, 255, 255, 0.3);
+  --cyber-border-magenta: rgba(255, 0, 255, 0.3);
+  --cyber-border-green: rgba(0, 255, 136, 0.3);
+
+  /* Cyberpunk 发光阴影 */
+  --cyber-glow-cyan: 0 0 8px rgba(0, 255, 255, 0.5);
+  --cyber-glow-magenta: 0 0 8px rgba(255, 0, 255, 0.5);
+  --cyber-glow-green: 0 0 8px rgba(0, 255, 136, 0.5);
+  --cyber-glow-card: 0 0 20px rgba(0, 255, 255, 0.05);
+
   /* 主色调 - Electronic Purple */
   --color-primary: #b79fff;
   --color-primary-rgb: 183, 159, 255;

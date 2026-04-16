@@ -122,6 +122,7 @@ marked.setOptions({
 
 const props = defineProps<{
   visible: boolean
+  width?: number
 }>()
 
 const emit = defineEmits(['close'])
@@ -195,7 +196,7 @@ defineExpose({
 <style scoped>
 /* ========== 基础布局 ========== */
 .ai-sidebar {
-  width: 320px;
+  width: 100%;
   height: 100%;
   padding: 0 10px;
   border-left: 1px solid rgba(70, 72, 77, 0.15);

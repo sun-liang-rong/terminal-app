@@ -96,7 +96,7 @@ import LocalFileBrowser from './LocalFileBrowser.vue'
 import RemoteFileBrowser from './RemoteFileBrowser.vue'
 import TransferQueue from './TransferQueue.vue'
 import {
-  sftpState, initLocalPath, refreshAll, toggleQueueExpanded,
+  sftpState, initLocalPath, refreshAll as refreshAllSftp, toggleQueueExpanded as toggleQueueExpandedSftp,
   startUpload, startDownload, loadRemoteFiles
 } from '../utils/sftpStore'
 import { setupProgressListener, removeProgressListener } from '../utils/sftpStore'
@@ -106,7 +106,7 @@ import type { LocalFileItem, SftpItem } from '../types/electron'
 
 // Props
 interface Props {
-  sshId?: string
+  sshId?: string | undefined
 }
 
 const props = defineProps<Props>()
@@ -137,14 +137,14 @@ onUnmounted(() => {
   removeProgressListener()
 })
 
-// 刷新所有
+// // 刷新所有
 const refreshAll = () => {
-  refreshAll()
+  refreshAllSftp()
 }
 
 // 切换队列展开
 const toggleQueueExpanded = () => {
-  toggleQueueExpanded()
+  toggleQueueExpandedSftp()
 }
 
 // 处理上传请求

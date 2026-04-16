@@ -1,0 +1,73 @@
+<h2>赛博朋克终端设计</h2>
+<p class="subtitle">适度光效点缀，专业感与科技氛围结合</p>
+
+<div class="mockup">
+  <div class="mockup-header">终端主体区域设计</div>
+  <div class="mockup-body" style="background: #0a0a12; padding: 24px; border-radius: 0 0 8px 8px;">
+    <!-- 终端窗口 -->
+    <div style="background: #000; border: 1px solid rgba(0,255,255,0.3); border-radius: 4px; overflow: hidden; box-shadow: 0 0 30px rgba(0,255,255,0.1);">
+      <!-- 终端标题栏 -->
+      <div style="background: linear-gradient(90deg, rgba(0,255,255,0.1), rgba(255,0,255,0.1)); padding: 8px 12px; border-bottom: 1px solid rgba(0,255,255,0.2); display: flex; align-items: center; gap: 8px;">
+        <div style="width: 8px; height: 8px; background: #ff0055; border-radius: 50%; box-shadow: 0 0 6px #ff0055;"></div>
+        <div style="width: 8px; height: 8px; background: #00ff88; border-radius: 50%; box-shadow: 0 0 6px #00ff88;"></div>
+        <span style="color: rgba(0,255,255,0.8); font-size: 11px; font-family: monospace; margin-left: 8px;">◈ NEURAL TERMINAL ◈</span>
+      </div>
+      <!-- 终端内容 -->
+      <div style="padding: 16px; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5;">
+        <div style="color: #00ffff; text-shadow: 0 0 8px rgba(0,255,255,0.5);">╭──────────────────────────────────────╮</div>
+        <div style="color: #00ffff;">│ <span style="color: #ff00ff; text-shadow: 0 0 8px rgba(255,0,255,0.5);">▓ NEURAL ▓</span> <span style="color: #00ff88;">v4.0</span> │</div>
+        <div style="color: #00ffff;">╰──────────────────────────────────────╯</div>
+        <div style="margin-top: 12px;">
+          <span style="color: #ff00ff; text-shadow: 0 0 5px rgba(255,0,255,0.4);">➜</span>
+          <span style="color: #00ffff;"> ~/project</span>
+          <span style="color: rgba(255,255,255,0.5);">$</span>
+          <span style="color: #fff;"> npm run dev</span>
+        </div>
+        <div style="color: #00ff88; margin-top: 4px; text-shadow: 0 0 4px rgba(0,255,136,0.3);">► Starting development server...</div>
+      </div>
+    </div>
+
+    <!-- 色彩标注 -->
+    <div style="margin-top: 16px; display: flex; gap: 16px; font-size: 12px;">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <div style="width: 16px; height: 16px; background: #00ffff; border-radius: 4px; box-shadow: 0 0 8px rgba(0,255,255,0.5);"></div>
+        <span style="color: #888;">主色调 Cyan</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <div style="width: 16px; height: 16px; background: #ff00ff; border-radius: 4px; box-shadow: 0 0 8px rgba(255,0,255,0.5);"></div>
+        <span style="color: #888;">点缀色 Magenta</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <div style="width: 16px; height: 16px; background: #00ff88; border-radius: 4px; box-shadow: 0 0 8px rgba(0,255,136,0.5);"></div>
+        <span style="color: #888;">成功色 Green</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <p class="label">设计要点</p>
+  <ul style="color: #888; margin-top: 8px; padding-left: 20px; font-size: 13px;">
+    <li>边框使用半透明 Cyan 光效，不抢眼但有科技感</li>
+    <li>标题栏渐变背景，左侧状态指示灯带微光</li>
+    <li>关键文字（如 Logo、命令提示符）带 text-shadow 微光</li>
+    <li>输出文字使用柔和发光，不干扰阅读</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top: 24px;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>喜欢这个方向</h3>
+      <p>继续细化欢迎页和状态栏设计</p>
+    </div>
+  </div>
+  <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>需要调整</h3>
+      <p>告诉我具体哪里需要改</p>
+    </div>
+  </div>
+</div>

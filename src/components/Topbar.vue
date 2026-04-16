@@ -127,10 +127,11 @@ const closeWindow = async () => {
   align-items: center;
   justify-content: space-between;
   height: 48px;
-  background: var(--color-surface, #0c0e12);
-  border-bottom: 1px solid rgba(70, 72, 77, 0.1);
+  background: rgba(10, 10, 18, 0.8);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
   padding: 0 16px;
   z-index: 40;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.05);
 }
 
 /* ========== 左侧区域 ========== */
@@ -164,16 +165,18 @@ const closeWindow = async () => {
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
-  color: var(--color-on-surface-variant, #aaabb0);
+  color: rgba(255, 255, 255, 0.6);
   transition: all 0.15s ease;
 }
 
 .tool-btn:hover {
-  background: rgba(29, 32, 37, 0.6);
-  color: var(--color-on-surface, #f6f6fc);
+  background: rgba(0, 255, 255, 0.1);
+  color: var(--cyber-cyan, #00ffff);
+  border-color: rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
 }
 
 .tool-btn:active {
@@ -194,19 +197,20 @@ const closeWindow = async () => {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(29, 32, 37, 0.8);
-  border: 1px solid rgba(70, 72, 77, 0.3);
+  background: rgba(10, 10, 18, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--color-on-surface-variant, #aaabb0);
+  color: rgba(255, 255, 255, 0.6);
   transition: all 0.15s ease;
 }
 
 .avatar-placeholder:hover {
-  border-color: rgba(183, 159, 255, 0.4);
-  color: var(--color-primary, #b79fff);
+  border-color: var(--cyber-magenta, #ff00ff);
+  color: var(--cyber-magenta, #ff00ff);
+  box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
 }
 
 .avatar-placeholder :deep(svg) {
@@ -221,7 +225,7 @@ const closeWindow = async () => {
   gap: 0;
   margin-left: 12px;
   padding-left: 12px;
-  border-left: 1px solid rgba(70, 72, 77, 0.3);
+  border-left: 1px solid rgba(0, 255, 255, 0.2);
 }
 
 .window-btn {
@@ -234,18 +238,19 @@ const closeWindow = async () => {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  color: var(--color-on-surface-variant, #aaabb0);
+  color: rgba(255, 255, 255, 0.6);
   transition: all 0.15s ease;
 }
 
 .window-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--color-on-surface, #f6f6fc);
+  background: rgba(0, 255, 255, 0.1);
+  color: var(--cyber-cyan, #00ffff);
 }
 
 .window-btn.close:hover {
-  background: #e81123;
+  background: var(--cyber-red, #ff0055);
   color: white;
+  box-shadow: 0 0 8px rgba(255, 0, 85, 0.5);
 }
 
 .window-btn :deep(svg) {

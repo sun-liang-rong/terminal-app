@@ -17,7 +17,7 @@ import type { SshConfig } from './types/electron'
 import { updateStatus } from './utils/terminalStatus'
 import { toast } from './utils/notification'
 import { useResponsive } from './utils/useResponsive'
-import { initLayout, layoutState, toggleAssistantPanel, setCustomThemeColor } from './utils/layoutStore'
+import { initLayout, layoutState, toggleAssistantPanel, setCustomThemeColor, setAssistantPanelWidth, ASSISTANT_PANEL_MIN_WIDTH, ASSISTANT_PANEL_MAX_WIDTH } from './utils/layoutStore'
 import { initModalManager, destroyModalManager } from './utils/modalManager'
 import { setSSHConnection } from './utils/sftpStore'
 import { PhX, PhPlus } from '@phosphor-icons/vue'
@@ -47,6 +47,8 @@ interface ModalExposed {
 const activeTab = ref('terminal')
 const sshPanelRef = ref<SSHPanelExposed | null>(null)
 const modalRef = ref<ModalExposed | null>(null)
+const closeSessionModalRef = ref<InstanceType<typeof Modal> | null>(null)
+const pendingCloseSessionId = ref<number | null>(null)
 
 // 命令面板状态
 const showCommandPalette = ref(false)
@@ -134,13 +136,24 @@ const switchSessionByIndex = (index: number) => {
 }
 
 // 关闭会话
-const closeSession = (id: number) => {
+const closeSession = async (id: number) => {
   if (sessions.value.length <= 1) return
 
-  const session = sessions.value.find(s => s.id === id)
+  // 显示确认弹窗
+  pendingCloseSessionId.value = id
+  const confirmed = await closeSessionModalRef.value?.show()
+  if (!confirmed) {
+    pendingCloseSessionId.value = null
+    return
+  }
+
+  const session = sessions.value.find(s => s.id === pendingCloseSessionId.value)
+  pendingCloseSessionId.value = null
+
+  if (!session) return
 
   // 如果是 SSH 会话，断开连接
-  if (session && session.type === 'ssh' && session.sshId) {
+  if (session.type === 'ssh' && session.sshId) {
     window.electronAPI.sshDisconnect({ id: session.sshId })
   }
 
@@ -354,6 +367,9 @@ const handleKeydown = (e: KeyboardEvent) => {
 
 onMounted(async () => {
   window.addEventListener('keydown', handleKeydown)
+  // AI面板拖拽事件
+  document.addEventListener('mousemove', handleDraggingAssistant)
+  document.addEventListener('mouseup', stopDraggingAssistant)
   // 初始化布局设置
   initLayout()
   // 应用自定义主题色（如果已设置）
@@ -372,6 +388,9 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  // 移除AI面板拖拽事件
+  document.removeEventListener('mousemove', handleDraggingAssistant)
+  document.removeEventListener('mouseup', stopDraggingAssistant)
   destroyModalManager()
   // 停止系统监控
   stopSystemMonitor()
@@ -410,6 +429,37 @@ const sidebarCollapsed = computed(() => layoutState.value.sidebarCollapsed)
 
 // 计算 AI 面板是否可见
 const assistantPanelVisible = computed(() => layoutState.value.assistantPanelVisible)
+
+// 计算 AI 面板宽度
+const assistantPanelWidth = computed(() => layoutState.value.assistantPanelWidth)
+
+// AI面板拖拽调整宽度
+const isDraggingAssistant = ref(false)
+const dragStartX = ref(0)
+const dragStartWidth = ref(0)
+
+const startDraggingAssistant = (e: MouseEvent) => {
+  isDraggingAssistant.value = true
+  dragStartX.value = e.clientX
+  dragStartWidth.value = assistantPanelWidth.value
+  document.body.style.cursor = 'ew-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const handleDraggingAssistant = (e: MouseEvent) => {
+  if (!isDraggingAssistant.value) return
+  const deltaX = dragStartX.value - e.clientX // 从右往左拖，deltaX为正时宽度增加
+  const newWidth = dragStartWidth.value + deltaX
+  setAssistantPanelWidth(newWidth)
+}
+
+const stopDraggingAssistant = () => {
+  if (isDraggingAssistant.value) {
+    isDraggingAssistant.value = false
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+}
 
 // 系统监控数据
 const cpuUsage = ref(0)
@@ -572,7 +622,7 @@ const stopSystemMonitor = () => {
 
             <!-- SFTP 文件管理面板 -->
             <div class="panel-container" v-show="activeTab === 'sftp'">
-              <SftpPanel :ssh-id="currentSSHId" />
+              <SftpPanel :ssh-id="currentSSHId || undefined" />
             </div>
 
             <!-- 设置面板 -->
@@ -598,9 +648,20 @@ const stopSystemMonitor = () => {
         </div>
 
         <!-- 右侧 AI 助手面板 -->
-        <div class="ai-panel-wrapper" v-show="assistantPanelVisible">
+        <div
+          class="ai-panel-wrapper"
+          v-show="assistantPanelVisible"
+          :style="{ width: assistantPanelWidth + 'px' }"
+        >
+          <!-- 拖拽调整宽度手柄 -->
+          <div
+            class="ai-panel-resize-handle"
+            :class="{ dragging: isDraggingAssistant }"
+            @mousedown="startDraggingAssistant"
+          ></div>
           <AssistantPanel
             :visible="assistantPanelVisible"
+            :width="assistantPanelWidth"
             @close="toggleAssistantPanel()"
           />
         </div>
@@ -612,6 +673,9 @@ const stopSystemMonitor = () => {
 
     <!-- 全局通知容器 -->
     <ToastContainer />
+
+    <!-- 关闭会话确认弹窗 -->
+    <Modal ref="closeSessionModalRef" type="confirm" title="关闭会话" message="确定要关闭此会话吗？" confirmText="关闭" />
 
     <!-- 命令面板 -->
     <CommandPalette
@@ -721,14 +785,38 @@ body {
 /* AI面板包装器 */
 .ai-panel-wrapper {
   display: flex;
-  width: 320px;
-  transition: width 0.3s ease;
+  position: relative;
+  min-width: 280px;
+  max-width: 600px;
+  transition: width 0.1s ease;
   overflow: hidden;
   flex-shrink: 0;
 }
 
 .ai-panel-wrapper[v-show="false"] {
   width: 0;
+  min-width: 0;
+}
+
+/* AI面板拖拽手柄 */
+.ai-panel-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+  background: transparent;
+  z-index: 10;
+  transition: background 0.2s ease;
+}
+
+.ai-panel-resize-handle:hover {
+  background: var(--color-primary, #b79fff);
+}
+
+.ai-panel-resize-handle.dragging {
+  background: var(--color-primary, #b79fff);
 }
 
 /* 会话标签栏 */
@@ -922,15 +1010,15 @@ body {
   color: var(--color-error, #ff6e84);
 }
 
-/* 终端包装器 */
+/* 终端包装器 - Cyberpunk 风格 */
 .terminal-wrapper {
   flex: 1;
   overflow: hidden;
   position: relative;
-  border-radius: 0;
-  background: var(--color-surface-container-lowest, #000000);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 15px -3px rgba(45, 183, 242, 0.2);
-  border: 1px solid rgba(70, 72, 77, 0.15);
+  border-radius: 8px;
+  background: var(--color-surface-container-lowest, #0a0a12);
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.1), 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 255, 0.3);
 }
 
 /* 终端面板 */
@@ -960,15 +1048,16 @@ body {
   border-radius: 0;
 }
 
-/* 系统监控栏 */
+/* 系统监控栏 - Cyberpunk 风格 */
 .system-monitor {
-  background: rgba(17, 19, 24, 0.6);
-  border: 1px solid rgba(70, 72, 77, 0.15);
-  border-radius: 12px;
+  background: rgba(10, 10, 18, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: 8px;
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.05);
 }
 
 .monitor-header {
@@ -979,55 +1068,81 @@ body {
 
 .monitor-title {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--color-on-surface-variant, #aaabb0);
+  letter-spacing: 0.1em;
+  color: var(--cyber-cyan, #00ffff);
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
 .monitor-status {
   font-size: 10px;
   font-family: var(--font-mono, 'Fira Code', monospace);
-  color: var(--color-secondary, #2db7f2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.monitor-status.medium {
-  color: var(--color-tertiary, #ff86c3);
+.monitor-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--cyber-green, #00ff88);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--cyber-green, #00ff88);
 }
 
-.monitor-status.high {
-  color: var(--color-error, #ff6e84);
+.monitor-status.medium::before {
+  background: var(--cyber-magenta, #ff00ff);
+  box-shadow: 0 0 6px var(--cyber-magenta, #ff00ff);
+}
+
+.monitor-status.high::before {
+  background: var(--cyber-red, #ff0055);
+  box-shadow: 0 0 6px var(--cyber-red, #ff0055);
 }
 
 .progress-bar {
   width: 100%;
-  height: 6px;
-  background: rgba(29, 32, 37, 0.8);
-  border-radius: 3px;
+  height: 4px;
+  background: rgba(0, 255, 255, 0.1);
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-secondary, #2db7f2), var(--color-primary, #b79fff));
-  border-radius: 3px;
+  background: linear-gradient(90deg, var(--cyber-cyan, #00ffff), var(--cyber-magenta, #ff00ff));
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
   transition: width 0.3s ease;
 }
 
 .progress-fill.medium {
-  background: linear-gradient(90deg, var(--color-tertiary, #ff86c3), var(--color-tertiary-fixed, #ff8bc5));
+  background: linear-gradient(90deg, var(--cyber-magenta, #ff00ff), var(--cyber-red, #ff0055));
+  box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
 }
 
 .progress-fill.high {
-  background: linear-gradient(90deg, var(--color-error, #ff6e84), var(--color-error-dim, #d73357));
+  background: linear-gradient(90deg, var(--cyber-red, #ff0055), #ff3300);
+  box-shadow: 0 0 10px rgba(255, 0, 85, 0.5);
 }
 
 .monitor-stats {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 13px;
   font-family: var(--font-mono, 'Fira Code', monospace);
-  color: var(--color-on-surface-variant, #aaabb0);
+}
+
+.monitor-stats span:first-child {
+  color: var(--cyber-cyan, #00ffff);
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+}
+
+.monitor-stats span:last-child {
+  color: var(--cyber-magenta, #ff00ff);
+  text-shadow: 0 0 5px rgba(255, 0, 255, 0.3);
 }
 
 /* 沉浸模式 */

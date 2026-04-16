@@ -1,0 +1,98 @@
+<h2>赛博朋克终端设计 - 最终方案</h2>
+<p class="subtitle">适度光效点缀 · 专业科技氛围</p>
+
+<div class="section" style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 24px;">
+  <p class="label">配色方案</p>
+  <div style="display: flex; gap: 16px; margin-top: 12px;">
+    <div style="text-align: center;">
+      <div style="width: 48px; height: 48px; background: #00ffff; border-radius: 8px; box-shadow: 0 0 15px rgba(0,255,255,0.5);"></div>
+      <div style="color: #888; font-size: 11px; margin-top: 6px;">Cyan 主色</div>
+      <div style="color: #666; font-size: 10px;">边框/提示符</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="width: 48px; height: 48px; background: #ff00ff; border-radius: 8px; box-shadow: 0 0 15px rgba(255,0,255,0.5);"></div>
+      <div style="color: #888; font-size: 11px; margin-top: 6px;">Magenta 点缀</div>
+      <div style="color: #666; font-size: 10px;">Logo/强调</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="width: 48px; height: 48px; background: #00ff88; border-radius: 8px; box-shadow: 0 0 15px rgba(0,255,136,0.5);"></div>
+      <div style="color: #888; font-size: 11px; margin-top: 6px;">Green 成功</div>
+      <div style="color: #666; font-size: 10px;">输出/状态</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="width: 48px; height: 48px; background: #ff0055; border-radius: 8px; box-shadow: 0 0 15px rgba(255,0,85,0.5);"></div>
+      <div style="color: #888; font-size: 11px; margin-top: 6px;">Red 错误</div>
+      <div style="color: #666; font-size: 10px;">警告/失败</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="width: 48px; height: 48px; background: #0a0a12; border: 1px solid rgba(0,255,255,0.3); border-radius: 8px;"></div>
+      <div style="color: #888; font-size: 11px; margin-top: 6px;">背景色</div>
+      <div style="color: #666; font-size: 10px;">#0a0a12</div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <p class="label">设计组件清单</p>
+
+  <div style="margin-top: 12px;">
+    <h3 style="color: #00ffff; font-size: 14px;">1. 终端主体区域</h3>
+    <ul style="color: #888; margin-top: 8px; padding-left: 20px; font-size: 12px;">
+      <li>边框：半透明 Cyan (#00ffff @ 30% opacity) + 微外发光</li>
+      <li>标题栏：渐变背景 (Cyan→Magenta @ 10% opacity)</li>
+      <li>状态指示灯：红/绿发光小球</li>
+      <li>命令提示符：Cyan/Magenta 双色 + text-shadow</li>
+      <li>输出文字：Green + 柔和发光</li>
+    </ul>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <h3 style="color: #ff00ff; font-size: 14px;">2. 空态引导层</h3>
+    <ul style="color: #888; margin-top: 8px; padding-left: 20px; font-size: 12px;">
+      <li>Logo：64px 圆角方块，渐变背景 + 外发光</li>
+      <li>标题：Cyan + Magenta 双色拼接，letter-spacing: 2px</li>
+      <li>分隔线：三色渐变 (transparent → Cyan → Magenta → transparent)</li>
+      <li>操作卡片：每项独立配色边框 (Cyan/Magenta/Green)</li>
+      <li>快捷键：统一 Cyan 边框的 kbd 样式</li>
+    </ul>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <h3 style="color: #00ff88; font-size: 14px;">3. 系统监控区</h3>
+    <ul style="color: #888; margin-top: 8px; padding-left: 20px; font-size: 12px;">
+      <li>卡片边框：Cyan @ 20% + 微外发光</li>
+      <li>状态指示：Green 发光小球 + "ONLINE" 文字</li>
+      <li>进度条：Cyan→Magenta 渐变 + 发光效果</li>
+      <li>数据分列：CPU Cyan / RAM Magenta 区分</li>
+      <li>数值：monospace 字体 + text-shadow 微光</li>
+    </ul>
+  </div>
+</div>
+
+<div style="margin-top: 24px; padding: 16px; background: rgba(255,0,255,0.1); border: 1px solid rgba(255,0,255,0.2); border-radius: 8px;">
+  <p class="label">实现要点</p>
+  <ul style="color: #888; margin-top: 8px; padding-left: 20px; font-size: 12px;">
+    <li>CSS 变量定义：--cyber-cyan, --cyber-magenta, --cyber-green, --cyber-red</li>
+    <li>text-shadow 统一：0 0 8px rgba(color, 0.5)</li>
+    <li>box-shadow 卡片：0 0 20px rgba(color, 0.05)</li>
+    <li>进度条动画：可选的发光脉冲效果</li>
+    <li>保持可读性：发光效果不要过度干扰文字识别</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top: 24px;">
+  <div class="option" data-choice="finalize" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>确认最终方案</h3>
+      <p>开始编写设计文档并进入实现阶段</p>
+    </div>
+  </div>
+  <div class="option" data-choice="review" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>需要再看看</h3>
+      <p>返回某个设计细节进行调整</p>
+    </div>
+  </div>
+</div>

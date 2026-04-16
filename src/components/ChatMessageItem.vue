@@ -181,7 +181,7 @@ onMounted(() => {
 
 /* 消息内容 */
 .message-content {
-  flex: 1;
+  max-width: 85%;
   min-width: 0;
 }
 
@@ -189,6 +189,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+}
+
+.message-item.assistant .message-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .message-header {
@@ -237,6 +243,7 @@ onMounted(() => {
   font-size: 13px;
   line-height: 1.6;
   color: var(--color-on-surface, #f6f6fc);
+  width: fit-content;
   max-width: 100%;
   word-wrap: break-word;
 }
